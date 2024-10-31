@@ -14,6 +14,7 @@ export interface Content {
   source?: string; // The source of the content, if applicable, such as a reference or origin.
   url?: string; // The actual URL of the message or post, i.e. tweet URL or message link in discord
   inReplyTo?: UUID; // If this is a message in a thread, or a reply, store this
+  images?: string[]; // The URLs of the images in the message
   attachments?: Media[];
   [key: string]: unknown; // Allows for additional properties to be included dynamically.
 }
@@ -245,6 +246,7 @@ export type Character = {
   id?: UUID; // optional UUID which can be passed down to identify the character
   name: string;
   bio: string | string[];
+  imageGenModel?: any // The model to use for image generation
   lore: string[];
   messageExamples: MessageExample[][];
   postExamples: string[];
@@ -424,7 +426,7 @@ export interface IAgentRuntime {
   browserService: IBrowserService;
   speechService: ISpeechService;
   pdfService: IPdfService;
-
+  imageGenModel: any
   trimTokens(text: string, maxTokens: number, model: string): string;
   splitChunks(
     content: string,
@@ -496,6 +498,17 @@ export interface IAgentRuntime {
     max_context_length?: number;
     max_response_length?: number;
   }): Promise<Content>;
+  imagePromptCompletion(opts: {
+    serverUrl?: string;
+    token?: string;
+    context?: string;
+    stop?: string[];
+    model?: string;
+    frequency_penalty?: number;
+    presence_penalty?: number;
+    temperature?: number;
+    max_context_length?: number;
+  }): Promise<string>;
   objectArrayCompletion(opts: {
     serverUrl?: string;
     token?: string;

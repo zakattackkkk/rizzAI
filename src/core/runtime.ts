@@ -63,6 +63,7 @@ import settings from "./settings.ts";
 import { UUID, type Actor } from "./types.ts";
 import { stringToUuid } from "./uuid.ts";
 import { Keypair } from "@solana/web3.js";
+import { ImageGenModel } from "./imageGenModels.ts";
 
 /**
  * Represents the runtime environment for an agent, handling message processing,
@@ -112,7 +113,10 @@ export class AgentRuntime implements IAgentRuntime {
    * The model to use for completion.
    */
   model = settings.XAI_MODEL || "gpt-4o-mini";
-
+  /**
+   * The model to use for image generation.
+   */
+  imageGenModel: ImageGenModel = ImageGenModel.TogetherAI;
   /**
    * The model to use for embedding.
    */
@@ -202,6 +206,7 @@ export class AgentRuntime implements IAgentRuntime {
     actions?: Action[]; // Optional custom actions
     evaluators?: Evaluator[]; // Optional custom evaluators
     providers?: Provider[];
+    imageGenModel?: ImageGenModel; // The model to use for image generation
     model?: string; // The model to use for completion
     embeddingModel?: string; // The model to use for embedding
     databaseAdapter: IDatabaseAdapter; // The database adapter used for interacting with the database
@@ -259,7 +264,7 @@ export class AgentRuntime implements IAgentRuntime {
     if (!this.serverUrl) {
       console.warn("No serverUrl provided, defaulting to localhost");
     }
-
+    this.imageGenModel = this.character.imageGenModel ?? opts.imageGenModel ?? this.imageGenModel;
     this.token = opts.token;
 
     (opts.actions ?? []).forEach((action) => {
@@ -815,7 +820,60 @@ export class AgentRuntime implements IAgentRuntime {
       "Failed to complete message after 5 tries, probably a network connectivity, model or API key issue",
     );
   }
-
+/**
+   * Send a message to the model for completion.
+   * @param opts - The options for the completion request.
+   * @param opts.context The context of the message to be completed.
+   * @param opts.stop A list of strings to stop the completion at.
+   * @param opts.model The model to use for completion.
+   * @param opts.frequency_penalty The frequency penalty to apply to the completion.
+   * @param opts.presence_penalty The presence penalty to apply to the completion.
+   * @param opts.temperature The temperature to apply to the completion.
+   * @param opts.max_context_length The maximum length of the context to apply to the completion.
+   * @returns The completed message.
+   */
+async imagePromptCompletion({
+  context = "",
+  stop = [],
+  model = this.model,
+  frequency_penalty = 0.6,
+  presence_penalty = 0.6,
+  temperature = 0.3,
+  serverUrl = this.serverUrl,
+  token = this.token,
+  max_context_length = this.getSetting("OPENAI_API_KEY") ? 127000 : 8000,
+  max_response_length = this.getSetting("OPENAI_API_KEY") ? 8192 : 4096,
+}): Promise<string> {
+  context = this.trimTokens(context, max_context_length, "gpt-4o-mini");
+  let retryLength = 1000; // exponential backoff
+  while (true) {
+    try {
+      const response = await this.completion({
+        context,
+        serverUrl,
+        stop,
+        model,
+        token,
+        frequency_penalty,
+        presence_penalty,
+        temperature,
+        max_context_length,
+        max_response_length,
+      });
+      console.log("response is", response)
+      return response;
+    } catch (error) {
+      console.error("ERROR:", error);
+      // wait for 2 seconds
+      retryLength *= 2;
+      await new Promise((resolve) => setTimeout(resolve, retryLength));
+      console.log("Retrying...");
+    }
+  }
+  throw new Error(
+    "Failed to complete message after 5 tries, probably a network connectivity, model or API key issue",
+    );
+  }
   /**
    * Send a message to the OpenAI API for embedding.
    * @param input The input to be embedded.

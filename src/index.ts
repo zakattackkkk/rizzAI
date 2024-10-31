@@ -21,7 +21,7 @@ import { wait } from "./clients/twitter/utils.ts";
 import { TwitterSearchClient } from "./clients/twitter/search.ts";
 import { TwitterInteractionClient } from "./clients/twitter/interactions.ts";
 import { TwitterGenerationClient } from "./clients/twitter/generate.ts";
-
+import imageGeneration from './actions/generate_image.ts'
 interface Arguments {
   character?: string;
   characters?: string;
@@ -106,6 +106,7 @@ async function startAgent(character: Character) {
       unfollow_room,
       unmute_room,
       mute_room,
+      imageGeneration,
     ],
   });
 

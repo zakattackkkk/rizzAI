@@ -1,4 +1,4 @@
-import { Scraper, SearchMode, Tweet } from "agent-twitter-client";
+import { Scraper, SearchMode, Tweet } from "darinv-agent-twitter-client";
 import { addHeader } from "../../core/context.ts";
 import { Content, IAgentRuntime, Memory, UUID } from "../../core/types.ts";
 import { ClientBase } from "./base.ts";
@@ -105,8 +105,26 @@ export async function sendTweetChunks(
   const sentTweets: Tweet[] = [];
 
   for (const chunk of tweetChunks) {
+    let imageBuffer: Buffer | undefined;
+    if (content.images?.[0]) {
+      if (content.images[0].startsWith('data:image')) {
+        // Handle base64 image
+        const base64Data = content.images[0].replace(/^data:image\/[a-z]+;base64,/, "");
+        imageBuffer = Buffer.from(base64Data, 'base64');
+      } else {
+        // Handle URL image
+        try {
+          const response = await fetch(content.images[0]);
+          const arrayBuffer = await response.arrayBuffer();
+          imageBuffer = Buffer.from(arrayBuffer);
+        } catch (error) {
+          console.error('Failed to fetch image:', error);
+        }
+      }
+    }
+    console.info("IMAGE BUFFER", imageBuffer);
     const result = await client.requestQueue.add(
-      async () => await client.twitterClient.sendTweet(chunk.replaceAll(/\\n/g, "\n").trim(), inReplyTo),
+      async () => await client.twitterClient.sendTweet(chunk.replaceAll(/\\n/g, "\n").trim(), inReplyTo, imageBuffer),
     );
     console.log("send tweet result:\n", result);
     const body = await result.json();

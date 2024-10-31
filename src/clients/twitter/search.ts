@@ -1,4 +1,4 @@
-import { SearchMode } from "agent-twitter-client";
+import { SearchMode } from "darinv-agent-twitter-client";
 import fs from "fs";
 import { addHeader, composeContext } from "../../core/context.ts";
 import { log_to_file } from "../../core/logger.ts";
