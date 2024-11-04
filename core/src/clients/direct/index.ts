@@ -40,7 +40,7 @@ Note that {{agentName}} is capable of reading/seeing/hearing various forms of me
 
 {{actions}}
 
-# Instructions: Write the next message for {{agentName}}. Ignore "action".
+# Instructions: Write the next message for {{agentName}}.
 ` + messageCompletionFooter;
 
 export interface SimliClientConfig {
@@ -162,7 +162,12 @@ class DirectClient {
                     inReplyTo: undefined,
                 };
 
-                const userMessage = { content, userId, roomId, agentId: runtime.agentId };
+                const userMessage = {
+                    content,
+                    userId,
+                    roomId,
+                    agentId: runtime.agentId,
+                };
 
                 const memory: Memory = {
                     id: messageId,
@@ -198,6 +203,52 @@ class DirectClient {
                 };
 
                 await runtime.messageManager.createMemory(responseMessage);
+
+                // TODO: Improve action loop
+                if (response?.action) {
+                    const actions = [];
+                    await runtime.processActions(
+                        memory,
+                        [responseMessage],
+                        state,
+                        // @ts-ignore
+                        async (response) => {
+                            actions.push(response);
+                        }
+                    );
+
+                    // TODO: duplicate compose to get latest state, refactor to add in runtime.getState
+
+                    const actionState = (await runtime.composeState(
+                        userMessage,
+                        {
+                            agentName: runtime.character.name,
+                        }
+                    )) as State;
+
+                    const context = composeContext({
+                        state: actionState,
+                        template: `
+                        About {{agentName}}:
+                        {{bio}}
+                        {{lore}}
+                      
+                                                    
+                        Recent Messages
+                        {{recentMessages}}
+                        
+        
+                        [SYSTEM] Actions completed, now respond to user given the actions outputs.
+                        # Instructions: Write the next message for {{agentName}}.`,
+                    });
+                    const _response = await generateMessageResponse({
+                        runtime: runtime,
+                        context: context,
+                        modelClass: ModelClass.SMALL,
+                    });
+                    res.json(_response);
+                    return;
+                }
 
                 if (!response) {
                     res.status(500).send(

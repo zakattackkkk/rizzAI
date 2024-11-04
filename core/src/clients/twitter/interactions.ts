@@ -48,6 +48,7 @@ Recent interactions between {{agentName}} and other users:
 # Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
 {{currentPost}}
 
+{{actions}}
 ` + messageCompletionFooter;
 
 export const shouldRespondTemplate =
@@ -117,7 +118,8 @@ export class TwitterInteractionClient extends ClientBase {
                     !this.lastCheckedTweetId ||
                     parseInt(tweet.id) > this.lastCheckedTweetId
                 ) {
-                    const conversationId = tweet.conversationId + "-" + this.runtime.agentId;
+                    const conversationId =
+                        tweet.conversationId + "-" + this.runtime.agentId;
 
                     const roomId = stringToUuid(conversationId);
 
@@ -254,7 +256,11 @@ export class TwitterInteractionClient extends ClientBase {
                     text: tweet.text,
                     url: tweet.permanentUrl,
                     inReplyTo: tweet.inReplyToStatusId
-                        ? stringToUuid(tweet.inReplyToStatusId + "-" + this.runtime.agentId)
+                        ? stringToUuid(
+                              tweet.inReplyToStatusId +
+                                  "-" +
+                                  this.runtime.agentId
+                          )
                         : undefined,
                 },
                 userId: userIdUUID,

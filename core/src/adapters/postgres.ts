@@ -93,7 +93,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         const client = await this.pool.connect();
         try {
             const { rows } = await client.query(
-                `SELECT userState FROM participants WHERE "roomId" = $1 AND userId = $2`,
+                `SELECT "userState" FROM participants WHERE "roomId" = $1 AND "userId" = $2`,
                 [roomId, userId]
             );
             return rows.length > 0 ? rows[0].userState : null;
@@ -372,13 +372,13 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.start) {
                 paramCount++;
                 sql += ` AND "createdAt" >= to_timestamp($${paramCount})`;
-                values.push(params.start / 1000);
+                values.push(Math.round(params.start / 1000));
             }
 
             if (params.end) {
                 paramCount++;
                 sql += ` AND "createdAt" <= to_timestamp($${paramCount})`;
-                values.push(params.end / 1000);
+                values.push(Math.round(params.end / 1000));
             }
 
             if (params.unique) {
@@ -386,9 +386,9 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             }
 
             if (params.agentId) {
-                sql += ` AND "agentId" = $3`;
-                values.push(params.agentId);
                 paramCount++;
+                sql += ` AND "agentId" = $${paramCount}`;
+                values.push(params.agentId);
             }
 
             sql += ' ORDER BY "createdAt" DESC';
@@ -661,7 +661,8 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             }
 
             if (params.agentId) {
-                sql += ` AND "agentId" = $3`;
+                paramCount++;
+                sql += ` AND "agentId" = $${paramCount}`;
                 values.push(params.agentId);
             }
 

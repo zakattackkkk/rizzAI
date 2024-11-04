@@ -27,6 +27,7 @@ interface TokenPair {
         name: string;
         symbol: string;
     };
+    marketCap: number;
     priceNative: string;
     priceUsd: string;
     txns: {
@@ -147,10 +148,10 @@ export const searchCashTags = async (
 };
 
 export const cashtags: Action = {
-    name: "FIND_BEST_MATCH",
+    name: "FIND_BEST_CASHTAG_MATCH",
     similes: ["FIND_TOKEN", "SEARCH_TOKEN", "GET_TOKEN", "FIND_PAIR"],
     description:
-        "Searches for the best matching token pair based on age, liquidity, volume, and transaction count",
+        "Searches for the best matching token pair (ca) or $cashtag ($SOL) based on age, liquidity, volume, and transaction count",
     validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
         return true
     },
@@ -163,21 +164,12 @@ export const cashtags: Action = {
     ) => {
         const userId = runtime.agentId;
         const { roomId } = message;
-        const datestr = new Date().toUTCString().replace(/:/g, "-");
 
+       
         // Extract cashtag from message
         const cashtag = message.content.text
             .match(/\$[A-Za-z]+/)?.[0]
             ?.replace("$", "");
-
-        if (!cashtag) {
-            callback({
-                text: "No cashtag found in the message. Please include a cashtag (e.g. $PNUT)",
-                action: "FIND_BEST_MATCH_RESPONSE",
-                source: "DexScreener",
-            });
-            return;
-        }
 
         const callbackData: Content = {
             text: undefined,
@@ -186,27 +178,48 @@ export const cashtags: Action = {
             attachments: [],
         };
 
+        if (!cashtag) {
+            // callback({
+            //     text: "No cashtag found in the message. Please include a cashtag (e.g. $PNUT)",
+            //     action: "FIND_BEST_MATCH_RESPONSE",
+            //     source: "DexScreener",
+            // });
+            callbackData.text= "No cashtag found in the message. Please include a cashtag (e.g. $PNUT)";
+               
+            return;
+        }
+
+        console.log(`[${roomId}] Processing FIND_BEST_MATCH request... $`, cashtag);
+
         try {
             const { data: bestMatch, error } = await searchCashTags(cashtag);
 
             if (error) {
                 callbackData.text = error;
-                callback(callbackData);
+                // callback(callbackData);
                 return;
             }
+            console.log(bestMatch);
 
             // Format response
-            const responseText = `Best match for $${cashtag}:
-Token: ${bestMatch.baseToken.name} (${bestMatch.baseToken.symbol})
-Age: ${Math.floor((Date.now() - bestMatch.pairCreatedAt) / (1000 * 60 * 60 * 24))} days
-Liquidity: $${bestMatch.liquidity.usd.toLocaleString()}
-24h Volume: $${bestMatch.volume.h24.toLocaleString()}
-24h Transactions: ${(bestMatch.txns.h24.buys + bestMatch.txns.h24.sells).toLocaleString()}
-Price: $${bestMatch.priceUsd}
-DEX: ${bestMatch.dexId}
-Pair Address: ${bestMatch.pairAddress}`;
+            const responseText = `
+            Best match for $${cashtag}:
+            Token: ${bestMatch.baseToken.name} (${bestMatch.baseToken.symbol})
+            MCAP: $${(bestMatch.marketCap).toFixed(2)}M
+            Age: ${Math.floor((Date.now() - bestMatch.pairCreatedAt) / (1000 * 60 * 60 * 24))} days
+            Liquidity: $${bestMatch.liquidity.usd.toLocaleString()}
+            24h Volume: $${bestMatch.volume.h24.toLocaleString()}
+            24h Transactions: ${(bestMatch.txns.h24.buys + bestMatch.txns.h24.sells).toLocaleString()}
+            Price: $${bestMatch.priceUsd}
+            DEX: ${bestMatch.dexId}
+            Pair Address: ${bestMatch.pairAddress}
 
-            callbackData.text = responseText;
+            URL: ${bestMatch.url}`;
+
+            callbackData.text =  `Create a reply with the token information for $${cashtag}.
+                Message from user - ${message.content.text}
+                Token information - ${responseText}
+                `;
 
             // Store the full response as an attachment
             const attachmentId =
@@ -219,10 +232,10 @@ Pair Address: ${bestMatch.pairAddress}`;
                 title: `Best Match for $${cashtag}`,
                 source: "DexScreener",
                 description: `Token analysis for ${bestMatch.baseToken.symbol}`,
-                text: JSON.stringify(bestMatch, null, 2),
-            });
+                text: JSON.stringify(bestMatch, null, 2)
+            })
 
-            callback(callbackData);
+            // callback(callbackData);
 
             // Log to database
             runtime.databaseAdapter.log({
@@ -240,14 +253,20 @@ Pair Address: ${bestMatch.pairAddress}`;
                 roomId,
                 embedding: embeddingZeroVector,
             };
+            
 
             await runtime.messageManager.createMemory(memory);
-            await runtime.evaluate(message, state);
+            const response = await runtime.evaluate(message, state);
+
+
         } catch (error) {
             console.error("Error in findBestMatch:", error);
             callbackData.text = `Error processing request: ${error.message}`;
             callback(callbackData);
         }
+
+        console.log(callbackData);
+        typeof callback === "function" && callback(callbackData);
 
         return callbackData;
     },
@@ -263,7 +282,7 @@ Pair Address: ${bestMatch.pairAddress}`;
                 user: "{{user2}}",
                 content: {
                     text: "Let me search for the best matching pair...",
-                    action: "FIND_BEST_MATCH",
+                    action: "FIND_BEST_CASHTAG_MATCH",
                 },
             },
         ],
@@ -278,7 +297,7 @@ Pair Address: ${bestMatch.pairAddress}`;
                 user: "{{user2}}",
                 content: {
                     text: "I'll look up the token information...",
-                    action: "FIND_BEST_MATCH",
+                    action: "FIND_BEST_CASHTAG_MATCH",
                 },
             },
         ],
@@ -293,7 +312,7 @@ Pair Address: ${bestMatch.pairAddress}`;
                 user: "{{user2}}",
                 content: {
                     text: "Searching for the best BTC pair...",
-                    action: "FIND_BEST_MATCH",
+                    action: "FIND_BEST_CASHTAG_MATCH",
                 },
             },
         ],
