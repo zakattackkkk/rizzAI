@@ -318,7 +318,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                 params.roomId,
                 params.embedding,
                 params.match_threshold,
-                params.match_count,
+                +params.match_count,
             ]);
 
             return rows.map((row) => ({
@@ -375,7 +375,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.count) {
                 paramCount++;
                 sql += ` LIMIT $${paramCount}`;
-                values.push(params.count);
+                values.push(+params.count);
             }
 
             console.log("sql", sql, values);
@@ -580,7 +580,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                 opts.query_field_name,
                 opts.query_field_sub_name,
                 opts.query_table_name,
-                opts.query_match_count,
+                +opts.query_match_count,
             ]);
 
             return rows.map((row) => ({
@@ -661,7 +661,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.count) {
                 paramCount++;
                 sql += ` LIMIT $${paramCount}`;
-                values.push(params.count);
+                values.push(+params.count);
             }
 
             const { rows } = await client.query(sql, values);
