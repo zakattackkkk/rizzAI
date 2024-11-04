@@ -242,41 +242,69 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
         match_count: number;
         unique: boolean;
     }): Promise<Memory[]> {
-        const queryParams = [
-            new Float32Array(params.embedding), // Ensure embedding is Float32Array
-            params.tableName,
-            params.roomId,
-            params.match_count,
+        // Build the query parameters array
+        const queryParams: any[] = [
+            params.embedding, // $1: embedding vector
+            params.tableName, // $2: table name
+            params.roomId, // $3: room ID
+            params.match_count, // $4: limit count
         ];
 
+        console.log("searchMemories", params);
+
+        // Start building the SQL query
         let sql = `
-      SELECT *, vec_distance_L2(embedding, ?) AS similarity
-      FROM memories
-      WHERE type = ?`;
+        SELECT *,
+            embedding <-> $1 as similarity
+        FROM memories
+        WHERE type = $2
+        AND room_id = $3`;
+
+        let paramCount = 3; // Track the current parameter count
 
         if (params.unique) {
-            sql += " AND `unique` = 1";
+            paramCount++;
+            sql += ` AND unique = true`;
         }
 
         if (params.agentId) {
-            sql += " AND agentId = ?";
+            paramCount++;
+            sql += ` AND agent_id = $${paramCount}`;
             queryParams.push(params.agentId);
         }
 
-        sql += ` ORDER BY similarity ASC LIMIT ?`; // ASC for lower distance
-        // Updated queryParams order matches the placeholders
+        // Add similarity threshold if specified
+        if (params.match_threshold) {
+            paramCount++;
+            sql += ` AND embedding <-> $1 < $${paramCount}`;
+            queryParams.push(params.match_threshold);
+        }
 
-        const memories = this.db.prepare(sql).all(...queryParams) as (Memory & {
-            similarity: number;
-        })[];
-        return memories.map((memory) => ({
-            ...memory,
-            createdAt:
-                typeof memory.createdAt === "string"
-                    ? Date.parse(memory.createdAt as string)
-                    : memory.createdAt,
-            content: JSON.parse(memory.content as unknown as string),
-        }));
+        // Order by similarity and limit results
+        sql += `
+        ORDER BY similarity ASC
+        LIMIT $4`;
+
+        try {
+            // Use the pg pool or client to execute the query
+            const result = await this.db.query(sql, queryParams);
+
+            // Process and return the results
+            return result.rows.map((row) => ({
+                ...row,
+                createdAt:
+                    typeof row.created_at === "string"
+                        ? Date.parse(row.created_at)
+                        : row.created_at,
+                content:
+                    typeof row.content === "string"
+                        ? JSON.parse(row.content)
+                        : row.content,
+            }));
+        } catch (error) {
+            console.error("Error executing vector similarity search:", error);
+            throw error;
+        }
     }
 
     async searchMemoriesByEmbedding(

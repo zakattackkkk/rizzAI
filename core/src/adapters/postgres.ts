@@ -11,6 +11,8 @@ import {
     Participant,
 } from "../core/types.ts";
 import { DatabaseAdapter } from "../core/database.ts";
+import { zeroUuid } from "../test_resources/constants.ts";
+import { embeddingZeroVector } from "../core/memory.ts";
 const { Pool } = pg;
 
 export class PostgresDatabaseAdapter extends DatabaseAdapter {
@@ -265,6 +267,8 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                     }
                 );
                 isUnique = similarMemories.length === 0;
+            }else{
+                memory.embedding = embeddingZeroVector
             }
 
             await client.query(
@@ -287,16 +291,24 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             client.release();
         }
     }
-
+  
     async searchMemories(params: {
         tableName: string;
         roomId: UUID;
+        agentId?: UUID;
         embedding: number[];
         match_threshold: number;
         match_count: number;
         unique: boolean;
     }): Promise<Memory[]> {
         const client = await this.pool.connect();
+
+        const queryParams = [
+            new Float32Array(params.embedding), // Ensure embedding is Float32Array
+            params.tableName,
+            params.roomId,
+            params.match_count,
+        ];
         try {
             let sql = `
         SELECT *,
@@ -309,9 +321,16 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                 sql += ` AND "unique" = true`;
             }
 
+
+        if (params.agentId) {
+            sql += " AND agentId = ?";
+            queryParams.push(params.agentId);
+        }
+
             sql += ` AND 1 - (embedding <-> $3) >= $4
                ORDER BY embedding <-> $3
                LIMIT $5`;
+
 
             const { rows } = await client.query(sql, [
                 params.tableName,
@@ -330,6 +349,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             client.release();
         }
     }
+
 
     async getMemories(params: {
         roomId: UUID;
@@ -368,6 +388,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.agentId) {
                 sql += ` AND "agentId" = $3`;
                 values.push(params.agentId);
+                paramCount++;
             }
 
             sql += ' ORDER BY "createdAt" DESC';

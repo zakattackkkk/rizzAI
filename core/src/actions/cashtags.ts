@@ -151,9 +151,9 @@ export const cashtags: Action = {
     similes: ["FIND_TOKEN", "SEARCH_TOKEN", "GET_TOKEN", "FIND_PAIR"],
     description:
         "Searches for the best matching token pair based on age, liquidity, volume, and transaction count",
-    // validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
-    //     return !!runtime.getSetting("DEXSCREENER_API_URL");
-    // },
+    validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
+        return true
+    },
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
