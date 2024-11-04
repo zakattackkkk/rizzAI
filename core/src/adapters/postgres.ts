@@ -640,7 +640,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             }
 
             if (params.agentId) {
-                sql += " AND agentId = $3";
+                sql += ` AND "agentId" = $3`;
                 values.push(params.agentId);
             }
 
