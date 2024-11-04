@@ -1,8 +1,8 @@
+import { describe, expect, test } from "@jest/globals";
+
 import dotenv from "dotenv";
-// import { createRuntime } from "../test_resources/createRuntime.ts";
+
 import { searchCashTags } from "../../src/actions/cashtags.ts";
-import exp from "constants";
-// import { Memory, State } from "../core/types.ts";
 
 dotenv.config();
 

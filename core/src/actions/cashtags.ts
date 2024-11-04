@@ -115,7 +115,7 @@ export const searchCashTags = async (
     // Fetch data from DexScreener API
     const _cashtag = cleanString(cashtag);
     const apiUrl = `${API_URL}/latest/dex/search?q=${_cashtag}`;
-    console.log("API URL:", apiUrl);
+
     const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -219,7 +219,7 @@ Pair Address: ${bestMatch.pairAddress}`;
                 title: `Best Match for $${cashtag}`,
                 source: "DexScreener",
                 description: `Token analysis for ${bestMatch.baseToken.symbol}`,
-                text: JSON.stringify(sortedPairs, null, 2),
+                text: JSON.stringify(bestMatch, null, 2),
             });
 
             callback(callbackData);
