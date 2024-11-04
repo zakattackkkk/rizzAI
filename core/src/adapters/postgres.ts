@@ -418,7 +418,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.count) {
                 paramCount++;
                 sql += ` LIMIT $${paramCount}`;
-                values.push(params.count);
+                values.push(+params.count);
             }
 
             const { rows } = await client.query(sql, values);
