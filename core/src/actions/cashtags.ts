@@ -11,7 +11,7 @@ import {
 import { embeddingZeroVector } from "../core/memory.ts";
 import { log_to_file } from "../core/logger.ts";
 
-const API_URL = "https://api.dexscreener.com/";
+const API_URL = "https://api.dexscreener.com";
 
 interface TokenPair {
     chainId: string;
@@ -52,6 +52,32 @@ interface DexScreenerResponse {
     pairs: TokenPair[];
 }
 
+/**
+ * Cleans a string by removing dollar signs, spaces, and converting to lowercase
+ * 
+ * @param {string} input - The string to clean
+ * @returns {string} The cleaned string
+ * @throws {Error} If input is not a string
+ * 
+ * @example
+ * cleanString("$Hello World$") // returns "helloworld"
+ * cleanString("$100.00 USD") // returns "100.00usd"
+ * cleanString("  MIXED case  $STRING$ ") // returns "mixedcasestring"
+ */
+function cleanString(input) {
+    // Input validation
+    if (typeof input !== 'string') {
+        throw new Error('Input must be a string');
+    }
+
+    // Remove dollar signs, remove spaces, and convert to lowercase
+    return input
+        .replace(/\$/g, '')  // Remove all dollar signs
+        .replace(/\s+/g, '') // Remove all whitespace (spaces, tabs, newlines)
+        .toLowerCase();       // Convert to lowercase
+}
+
+
 function calculatePairScore(pair: TokenPair): number {
     let score = 0;
 
@@ -76,6 +102,49 @@ function calculatePairScore(pair: TokenPair): number {
 
     return score;
 }
+
+interface SearchResponse {
+    success: boolean;
+    data?: TokenPair | null;
+    error?: string;
+}
+
+export const searchCashTags = async (
+    cashtag: string
+): Promise<SearchResponse> => {
+    // Fetch data from DexScreener API
+    const _cashtag = cleanString(cashtag);
+    const apiUrl = `${API_URL}/latest/dex/search?q=${_cashtag}`;
+    console.log("API URL:", apiUrl);
+    const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+            Accept: "application/json",
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = (await response.json()) as DexScreenerResponse;
+
+    if (!data.pairs || data.pairs.length === 0) {
+        return {
+            success: false,
+            error: `No matching pairs found for ${_cashtag}`,
+        };
+    }
+
+    // Score and sort pairs
+    const scoredPairs = data.pairs.map((pair) => ({
+        ...pair,
+        score: calculatePairScore(pair),
+    }));
+
+    const sortedPairs = scoredPairs.sort((a, b) => b.score - a.score);
+    return { success: true, data: sortedPairs[0] };
+};
 
 export const cashtags: Action = {
     name: "FIND_BEST_MATCH",
@@ -118,41 +187,13 @@ export const cashtags: Action = {
         };
 
         try {
-            // Fetch data from DexScreener API
-            const apiUrl = `${API_URL}/latest/dex/search?q=${cashtag}`;
-            const response = await fetch(apiUrl, {
-                method: "GET",
-                headers: {
-                    Accept: "application/json",
-                },
-            });
+            const { data: bestMatch, error } = await searchCashTags(cashtag);
 
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            const data = (await response.json()) as DexScreenerResponse;
-
-            // Log the raw response
-            log_to_file(
-                `${state.agentName}_${datestr}_dexscreener_response`,
-                JSON.stringify(data, null, 2)
-            );
-
-            if (!data.pairs || data.pairs.length === 0) {
-                callbackData.text = `No matching pairs found for ${cashtag}`;
+            if (error) {
+                callbackData.text = error;
                 callback(callbackData);
                 return;
             }
-
-            // Score and sort pairs
-            const scoredPairs = data.pairs.map((pair) => ({
-                ...pair,
-                score: calculatePairScore(pair),
-            }));
-
-            const sortedPairs = scoredPairs.sort((a, b) => b.score - a.score);
-            const bestMatch = sortedPairs[0];
 
             // Format response
             const responseText = `Best match for $${cashtag}:

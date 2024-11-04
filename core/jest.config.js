@@ -1,6 +1,6 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
-    preset: "ts-jest",
+    preset: "ts-jest/presets/default-esm",
     testEnvironment: "node",
     rootDir: "./src",
     testMatch: ["**/*.test.ts"],
@@ -12,10 +12,17 @@ export default {
         __VERSION__: "0.0.1",
     },
     transform: {
-        "^.+\\.tsx?$": [
-            "ts-jest",
+        "^.+\\.(t|j)sx?$": [
+            "@swc/jest",
             {
-                useESM: true,
+                jsc: {
+                    target: "es2021",
+                    parser: {
+                        syntax: "typescript",
+                        tsx: true,
+                        decorators: true,
+                    },
+                },
             },
         ],
     },
@@ -23,4 +30,8 @@ export default {
         "^(\\.{1,2}/.*)\\.js$": "$1",
     },
     extensionsToTreatAsEsm: [".ts"],
-}
+    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+    transformIgnorePatterns: [
+        "node_modules/(?!(string-width|strip-ansi|ansi-regex|cliui)/)",
+    ],
+};
