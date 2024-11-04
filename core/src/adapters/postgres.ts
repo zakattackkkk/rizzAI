@@ -352,13 +352,13 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.start) {
                 paramCount++;
                 sql += ` AND "createdAt" >= to_timestamp($${paramCount})`;
-                values.push(params.start/1000);
+                values.push(params.start / 1000);
             }
 
             if (params.end) {
                 paramCount++;
                 sql += ` AND "createdAt" <= to_timestamp($${paramCount})`;
-                values.push(params.end/1000);
+                values.push(params.end / 1000);
             }
 
             if (params.unique) {
@@ -366,7 +366,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             }
 
             if (params.agentId) {
-                sql += " AND agentId = $3";
+                sql += ` AND "agentId" = $3`;
                 values.push(params.agentId);
             }
 
