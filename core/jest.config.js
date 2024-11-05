@@ -2,9 +2,9 @@
 export default {
     preset: "ts-jest",
     testEnvironment: "node",
-    rootDir: "./src",
+    rootDir: "./",
     testMatch: ["**/*.test.ts"],
-    setupFilesAfterEnv: ["<rootDir>/test_resources/testSetup.ts"],
+    setupFilesAfterEnv: ["<rootDir>/src/test_resources/testSetup.ts"],
     testTimeout: 120000,
     globals: {
         __DEV__: true,
@@ -23,4 +23,4 @@ export default {
         "^(\\.{1,2}/.*)\\.js$": "$1",
     },
     extensionsToTreatAsEsm: [".ts"],
-}
+};
