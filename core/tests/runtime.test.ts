@@ -40,6 +40,7 @@ describe("Agent Runtime", () => {
                         content,
                         roomId,
                         embedding,
+                        agentId: runtime.agentId,
                     });
                 if (!embedding) {
                     writeCachedEmbedding(
@@ -60,7 +61,11 @@ describe("Agent Runtime", () => {
             env: process.env as Record<string, string>,
         });
 
-        runtime = result.runtime;
+        if (result.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+
+        runtime = result.runtime as IAgentRuntime;
         user = result.session.user;
 
         const data = await getOrCreateRelationship({
@@ -102,6 +107,7 @@ describe("Agent Runtime", () => {
             userId: user.id as UUID,
             content: { text: "test message" },
             roomId: roomId as UUID,
+            agentId: runtime.agentId,
         };
 
         const state = await runtime.composeState(message);

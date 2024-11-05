@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
-import { createRuntime } from "../test_resources/createRuntime.ts";
-import { BrowserService } from "./browser.ts";
+import { createRuntime } from "../src/test_resources/createRuntime.ts";
+import { BrowserService } from "../src/services/browser.ts";
+import { IAgentRuntime } from "../src/core/types.ts";
 
 dotenv.config();
 
@@ -12,7 +13,10 @@ describe("BrowserService", () => {
             env: process.env as Record<string, string>,
             actions: [],
         });
-        browserService = BrowserService.getInstance(runtime);
+        if (runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        browserService = BrowserService.getInstance(runtime as IAgentRuntime);
         await browserService.initialize();
     });
 
@@ -25,7 +29,9 @@ describe("BrowserService", () => {
             env: process.env as Record<string, string>,
             actions: [],
         });
-        const newBrowserService = BrowserService.getInstance(runtime);
+        const newBrowserService = BrowserService.getInstance(
+            runtime as IAgentRuntime
+        );
         await expect(newBrowserService.initialize()).resolves.not.toThrow();
         await expect(newBrowserService.closeBrowser()).resolves.not.toThrow();
     });

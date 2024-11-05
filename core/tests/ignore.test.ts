@@ -21,7 +21,7 @@ import { populateMemories } from "../src/test_resources/populateMemories.ts";
 import { runAiTest } from "../src/test_resources/runAiTest.ts";
 import { messageHandlerTemplate } from "../src/test_resources/templates.ts";
 import { type User } from "../src/test_resources/types.ts";
-import action from "../src/actions/ignore.ts";
+import { ignore as action } from "../src/actions/ignore.ts";
 import { generateMessageResponse } from "../src/core/generation.ts";
 
 async function handleMessage(
@@ -42,6 +42,7 @@ async function handleMessage(
                 },
                 roomId,
                 embedding: embeddingZeroVector,
+                agentId: runtime.agentId,
             });
         }
     };
@@ -76,6 +77,7 @@ async function handleMessage(
         content: response,
         roomId,
         embedding: embeddingZeroVector,
+        agentId: runtime.agentId,
     };
 
     if (responseMessage.content.text?.trim()) {
@@ -107,7 +109,10 @@ describe("Ignore action tests", () => {
             actions: [action],
         });
         user = setup.session.user;
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = setup.runtime as IAgentRuntime;
 
         const data = await getOrCreateRelationship({
             runtime,
@@ -139,6 +144,7 @@ describe("Ignore action tests", () => {
                 userId: user?.id as UUID,
                 content: { text: "Never talk to me again" },
                 roomId: roomId as UUID,
+                agentId: runtime.agentId,
             };
 
             await populateMemories(runtime, user, roomId, [
@@ -159,6 +165,7 @@ describe("Ignore action tests", () => {
                     userId: user.id as UUID,
                     content: { text: "", action: "IGNORE" },
                     roomId: roomId as UUID,
+                    agentId: runtime.agentId,
                 };
 
                 await populateMemories(runtime, user, roomId, [
@@ -184,6 +191,7 @@ describe("Ignore action tests", () => {
                     userId: user.id as UUID,
                     content: { text: "", action: "IGNORE" },
                     roomId: roomId as UUID,
+                    agentId: runtime.agentId,
                 };
 
                 await populateMemories(runtime, user, roomId, [
@@ -207,6 +215,7 @@ describe("Ignore action tests", () => {
                 userId: user.id as UUID,
                 content: { text: "Bye" },
                 roomId: roomId as UUID,
+                agentId: runtime.agentId,
             };
 
             await populateMemories(runtime, user, roomId, [Goodbye1]);

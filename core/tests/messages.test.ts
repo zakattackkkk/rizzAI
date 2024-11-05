@@ -27,7 +27,11 @@ describe("Messages Library", () => {
         const setup = await createRuntime({
             env: process.env as Record<string, string>,
         });
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+
+        runtime = setup.runtime as IAgentRuntime;
         user = setup.session.user;
         actors = await getActorDetails({
             runtime,
@@ -78,11 +82,13 @@ describe("Messages Library", () => {
                 content: { text: "Hello" },
                 userId: user.id as UUID,
                 roomId: "00000000-0000-0000-0000-000000000000",
+                agentId: runtime.agentId,
             },
             {
                 content: { text: "How are you?" },
                 userId: "00000000-0000-0000-0000-000000000000",
                 roomId: "00000000-0000-0000-0000-000000000000",
+                agentId: runtime.agentId,
             },
         ];
         const formattedMessages = formatMessages({ messages, actors });
@@ -99,11 +105,13 @@ describe("Messages Library", () => {
                 content: { text: "Reflecting on the day" },
                 userId: user.id as UUID,
                 roomId: "00000000-0000-0000-0000-000000000000",
+                agentId: runtime.agentId,
             },
             {
                 content: { text: "Thoughts and musings" },
                 userId: "00000000-0000-0000-0000-000000000000",
                 roomId: "00000000-0000-0000-0000-000000000000room",
+                agentId: runtime.agentId,
             },
         ];
         const formattedFacts = formatFacts(facts);

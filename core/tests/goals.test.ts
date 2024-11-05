@@ -18,7 +18,11 @@ describe("Goals", () => {
         const result = await createRuntime({
             env: process.env as Record<string, string>,
         });
-        runtime = result.runtime;
+
+        if (result.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = result.runtime as IAgentRuntime;
         user = result.session.user;
         await runtime.databaseAdapter.removeAllGoals(zeroUuid);
     });

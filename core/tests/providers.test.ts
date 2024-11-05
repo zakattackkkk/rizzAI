@@ -26,7 +26,11 @@ describe("TestProvider", () => {
             env: process.env as Record<string, string>,
             providers: [TestProvider],
         });
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+
+        runtime = setup.runtime as IAgentRuntime;
         roomId = zeroUuid;
     });
 
@@ -35,6 +39,7 @@ describe("TestProvider", () => {
             userId: zeroUuid,
             content: { text: "" },
             roomId: roomId,
+            agentId: zeroUuid,
         };
 
         const testProviderResponse = await TestProvider.get(

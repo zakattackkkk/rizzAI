@@ -33,7 +33,10 @@ describe("Facts Evaluator", () => {
             actions: defaultActions,
         });
         user = setup.session.user;
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = setup.runtime as IAgentRuntime;
 
         if (!user.id) {
             throw new Error("User ID is undefined");
@@ -66,6 +69,7 @@ describe("Facts Evaluator", () => {
                 userId: user.id as UUID,
                 content: { text: "" },
                 roomId,
+                agentId: runtime.agentId,
             };
 
             const result = await evaluator.handler(runtime, message);
@@ -91,6 +95,7 @@ describe("Facts Evaluator", () => {
                     userId: user.id as UUID,
                     content: { text: "" },
                     roomId,
+                    agentId: runtime.agentId,
                 };
 
                 const result = await evaluator.handler(runtime, message);
@@ -124,6 +129,7 @@ async function addFacts(
             content: { text: fact },
             roomId: roomId,
             embedding: existingEmbedding,
+            agentId: runtime.agentId,
         });
         await runtime.factManager.createMemory(bakedMemory);
         if (!existingEmbedding) {

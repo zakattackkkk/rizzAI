@@ -12,8 +12,8 @@ import { getOrCreateRelationship } from "../src/test_resources/getOrCreateRelati
 import { populateMemories } from "../src/test_resources/populateMemories.ts";
 import { runAiTest } from "../src/test_resources/runAiTest.ts";
 import { type User } from "../src/test_resources/types.ts";
-import action from "../src/actions/continue.ts";
-import ignore from "../src/actions/ignore.ts";
+import { continueAction as action } from "../src/actions/continue.ts";
+import { ignore } from "../src/actions/ignore.ts";
 
 dotenv.config({ path: ".dev.vars" });
 
@@ -56,7 +56,10 @@ describe("User Profile", () => {
             actions: [action, ignore],
         });
         user = setup.session.user;
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = setup.runtime as IAgentRuntime;
 
         const data = await getOrCreateRelationship({
             runtime,
@@ -86,6 +89,7 @@ describe("User Profile", () => {
                 userId: user.id as UUID,
                 content: { text: "Hello" },
                 roomId: roomId as UUID,
+                agentId: runtime.agentId,
             };
 
             const validate = action.validate!;
@@ -104,6 +108,7 @@ describe("User Profile", () => {
                     action: "CONTINUE",
                 },
                 roomId: roomId as UUID,
+                agentId: runtime.agentId,
             };
 
             const result2 = await validate(runtime, message2);
@@ -121,6 +126,7 @@ describe("User Profile", () => {
                     action: "CONTINUE",
                 },
                 roomId,
+                agentId: runtime.agentId,
             };
 
             const handler = action.handler!;
@@ -145,6 +151,7 @@ describe("User Profile", () => {
                         text: "Write a short story in three parts, using the CONTINUE action for each part.",
                     },
                     roomId: roomId,
+                    agentId: runtime.agentId,
                 };
 
                 const initialMessageCount =
@@ -196,6 +203,7 @@ describe("User Profile", () => {
                     text: "Tell me more about your favorite food.",
                 },
                 roomId: roomId as UUID,
+                agentId: runtime.agentId,
             };
 
             const initialMessageCount =
@@ -216,6 +224,7 @@ describe("User Profile", () => {
                 userId: user?.id as UUID,
                 content: { text: "Bye" },
                 roomId: roomId as UUID,
+                agentId: runtime.agentId,
             };
 
             const handler = action.handler!;

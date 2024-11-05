@@ -25,7 +25,10 @@ describe("Evaluation Process", () => {
             env: process.env as Record<string, string>,
             evaluators: [TEST_EVALUATOR, TEST_EVALUATOR_FAIL],
         });
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = setup.runtime as IAgentRuntime;
         user = setup.session.user;
 
         const data = await getOrCreateRelationship({
@@ -61,6 +64,7 @@ describe("Evaluation Process", () => {
             userId: user.id as UUID,
             content: { text: "Test message for evaluation" },
             roomId,
+            agentId: runtime.agentId,
         };
 
         const state = await runtime.composeState(message);
@@ -79,6 +83,7 @@ describe("Evaluation Process", () => {
             userId: user.id as UUID,
             content: { text: "Run TEST_EVALUATOR handler" },
             roomId,
+            agentId: runtime.agentId,
         };
 
         const result = await TEST_EVALUATOR.handler(runtime, message);
@@ -93,6 +98,7 @@ describe("Evaluation Process", () => {
                     text: "We are in testing mode. We want to make sure that the test passes by replying with the evaluator TEST_EVALUATOR in the array of evaluators that are returned. Please run the TEST_EVALUATOR",
                 },
                 roomId,
+                agentId: runtime.agentId,
             };
 
             const state = await runtime.composeState(message);
@@ -113,6 +119,7 @@ describe("Evaluation Process", () => {
             userId: user.id as UUID,
             content: { text: "Test message for evaluation" },
             roomId,
+            agentId: runtime.agentId,
         };
 
         const state = await runtime.composeState(message);

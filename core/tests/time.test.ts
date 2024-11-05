@@ -8,7 +8,7 @@ import {
 } from "../src/core/types.ts";
 import { zeroUuid } from "../src/test_resources/constants.ts";
 import { createRuntime } from "../src/test_resources/createRuntime.ts";
-import timeProvider from "../src/providers/time.ts";
+import {timeProvider} from "../src/providers/time.ts";
 
 dotenv.config({ path: ".dev.vars" });
 
@@ -22,7 +22,11 @@ describe("Time Provider", () => {
             env: process.env as Record<string, string>,
             providers: [timeProvider],
         });
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+
+        runtime = setup.runtime as IAgentRuntime;
         user = { id: setup.session.user?.id as UUID };
         roomId = zeroUuid;
     });
@@ -32,6 +36,8 @@ describe("Time Provider", () => {
             userId: user.id,
             content: { text: "" },
             roomId: roomId,
+            agentId:runtime.agentId,
+
         };
 
         const currentTimeResponse = await timeProvider.get(
@@ -49,6 +55,8 @@ describe("Time Provider", () => {
             userId: user.id,
             content: { text: "" },
             roomId: roomId,
+            agentId:runtime.agentId,
+
         };
 
         // Manually integrate the time provider's response into the state
@@ -74,6 +82,8 @@ describe("Time Provider", () => {
             userId: user.id,
             content: { text: "" },
             roomId: roomId,
+            agentId:runtime.agentId,
+
         };
         const currentTimeResponse = await timeProvider.get(runtime, message);
 

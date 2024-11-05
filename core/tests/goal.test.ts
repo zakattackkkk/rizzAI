@@ -32,7 +32,10 @@ describe("Goals Evaluator", () => {
             actions: defaultActions,
         });
         user = setup.session.user;
-        runtime = setup.runtime;
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = setup.runtime as IAgentRuntime;
 
         const data = await getOrCreateRelationship({
             runtime,
@@ -108,6 +111,7 @@ describe("Goals Evaluator", () => {
                         text: "I've completed task 1 and task 2 for the Test Goal. Both are finished. Everything is done and I'm ready for the next goal.",
                     },
                     roomId,
+                    agentId: runtime.agentId,
                 };
 
                 // Process the message with the goal evaluator
@@ -177,6 +181,7 @@ describe("Goals Evaluator", () => {
                     userId: user.id as UUID,
                     content: { text: "I've decided to mark Goal Y as failed." },
                     roomId,
+                    agentId: runtime.agentId,
                 };
 
                 await evaluator.handler(runtime, message, {} as State, {

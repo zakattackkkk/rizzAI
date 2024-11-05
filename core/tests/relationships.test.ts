@@ -19,7 +19,12 @@ describe("Relationships Module", () => {
         const setup = await createRuntime({
             env: process.env as Record<string, string>,
         });
-        runtime = setup.runtime;
+
+        if (setup.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+
+        runtime = setup.runtime as IAgentRuntime;
         user = setup.session.user;
         if (!user.id) {
             throw new Error("User ID is undefined");

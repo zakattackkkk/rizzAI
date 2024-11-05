@@ -8,13 +8,18 @@ import { createRuntime } from "../src/test_resources/createRuntime.ts";
 import { getOrCreateRelationship } from "../src/test_resources/getOrCreateRelationship.ts";
 import { type User } from "../src/test_resources/types.ts";
 import { MemoryManager } from "../src/core/memory.ts";
-import { type Content, type Memory, type UUID } from "../src/core/types.ts";
+import {
+    type Content,
+    type Memory,
+    type UUID,
+    IAgentRuntime,
+} from "../src/core/types.ts";
 import { embed } from "../src/core/embedding.ts";
 
 dotenv.config({ path: ".dev.vars" });
 describe("Memory", () => {
     let memoryManager: MemoryManager;
-    let runtime = null;
+    let runtime: IAgentRuntime | null = null;
     let user: User;
     let roomId: UUID = zeroUuid;
 
@@ -22,7 +27,10 @@ describe("Memory", () => {
         const result = await createRuntime({
             env: process.env as Record<string, string>,
         });
-        runtime = result.runtime;
+        if (result.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = result.runtime as IAgentRuntime;
         user = result.session.user;
 
         const data = await getOrCreateRelationship({
@@ -73,6 +81,7 @@ describe("Memory", () => {
             content: { text: similarMemoryContent },
             roomId: roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -89,6 +98,7 @@ describe("Memory", () => {
             content: { text: dissimilarMemoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -139,6 +149,7 @@ describe("Memory", () => {
             content: { text: queryMemoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -155,6 +166,7 @@ describe("Memory", () => {
             content: { text: highSimilarityContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -170,6 +182,7 @@ describe("Memory", () => {
             content: { text: lowSimilarityContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -203,7 +216,7 @@ describe("Memory", () => {
 });
 describe("Memory - Basic tests", () => {
     let memoryManager: MemoryManager;
-    let runtime = null;
+    let runtime: IAgentRuntime | null = null;
     let user: User;
     let roomId: UUID;
 
@@ -212,7 +225,11 @@ describe("Memory - Basic tests", () => {
         const result = await createRuntime({
             env: process.env as Record<string, string>,
         });
-        runtime = result.runtime;
+        if (result.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+
+        runtime = result.runtime as IAgentRuntime;
         user = result.session.user;
 
         const data = await getOrCreateRelationship({
@@ -248,6 +265,7 @@ describe("Memory - Basic tests", () => {
             content: { text: "Test content for memory lifecycle" },
             roomId: roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -259,7 +277,7 @@ describe("Memory - Basic tests", () => {
 
         const createdMemories = await memoryManager.getMemories({
             roomId,
-            agentId: runtime.agentId,
+            agentId: runtime?.agentId as UUID,
             count: 100,
         });
 
@@ -290,7 +308,7 @@ describe("Memory - Basic tests", () => {
 });
 describe("Memory - Extended Tests", () => {
     let memoryManager: MemoryManager;
-    let runtime = null;
+    let runtime: IAgentRuntime | null = null;
     let user: User;
     let roomId: UUID;
 
@@ -298,7 +316,10 @@ describe("Memory - Extended Tests", () => {
         const result = await createRuntime({
             env: process.env as Record<string, string>,
         });
-        runtime = result.runtime;
+        if (result.runtime.llamaService === null) {
+            throw new Error("llamaService cannot be null");
+        }
+        runtime = result.runtime as IAgentRuntime;
         user = result.session.user;
 
         const data = await getOrCreateRelationship({
@@ -349,6 +370,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: similarMemoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -394,6 +416,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: similarMemoryContent },
             roomId: roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -435,6 +458,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: memoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -452,6 +476,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: similarMemoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -488,6 +513,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: similarMemoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -504,6 +530,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: dissimilarMemoryContent },
             roomId,
             embedding: await getCachedEmbeddings(dissimilarMemoryContent),
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -553,6 +580,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: queryMemoryContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -569,6 +597,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: highSimilarityContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
@@ -584,6 +613,7 @@ describe("Memory - Extended Tests", () => {
             content: { text: lowSimilarityContent },
             roomId,
             embedding,
+            agentId: runtime?.agentId as UUID,
         });
         if (!embedding) {
             writeCachedEmbedding(
