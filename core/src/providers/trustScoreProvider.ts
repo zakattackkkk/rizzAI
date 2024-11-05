@@ -81,6 +81,9 @@ export class TrustScoreProvider {
 
         const recommenderMetrics =
             await this.trustScoreDb.getRecommenderMetrics(recommenderId);
+        if (!recommenderMetrics) {
+            throw new Error("Recommender not found");
+        }
 
         const isRapidDump = await this.isRapidDump(tokenAddress);
         const sustainedGrowth = await this.sustainedGrowth(tokenAddress);
@@ -109,12 +112,13 @@ export class TrustScoreProvider {
                     processedData.tradeData.price_change_24h_percent,
                 volumeChange24h: processedData.tradeData.volume_24h,
                 trade_24h_change:
-                    processedData.tradeData.trade_24h_change_percent,
+                    processedData.tradeData.trade_24h_change_percent || 0,
                 liquidity:
                     processedData.dexScreenerData.pairs[0]?.liquidity.usd || 0,
                 liquidityChange24h: 0,
                 holderChange24h:
-                    processedData.tradeData.unique_wallet_24h_change_percent,
+                    processedData.tradeData.unique_wallet_24h_change_percent ||
+                    0,
                 rugPull: false, // TODO: Implement rug pull detection
                 isScam: false, // TODO: Implement scam detection
                 marketCapChange24h: 0, // TODO: Implement market cap change
@@ -147,6 +151,9 @@ export class TrustScoreProvider {
     ): Promise<void> {
         const recommenderMetrics =
             await this.trustScoreDb.getRecommenderMetrics(recommenderId);
+        if (!recommenderMetrics) {
+            throw new Error("Recommender not found");
+        }
 
         const totalRecommendations =
             recommenderMetrics.totalRecommendations + 1;
@@ -269,6 +276,13 @@ export class TrustScoreProvider {
         const processedData: ProcessedTokenData =
             await this.tokenProvider.getProcessedTokenData();
         console.log(`Fetched processed token data for token: ${tokenAddress}`);
+        if (
+            !processedData ||
+            !processedData.tradeData ||
+            !processedData.tradeData.volume_24h_change_percent
+        ) {
+            return false;
+        }
 
         return processedData.tradeData.volume_24h_change_percent > 50;
     }
@@ -277,6 +291,14 @@ export class TrustScoreProvider {
         const processedData: ProcessedTokenData =
             await this.tokenProvider.getProcessedTokenData();
         console.log(`Fetched processed token data for token: ${tokenAddress}`);
+
+        if (
+            !processedData ||
+            !processedData.tradeData ||
+            !processedData.tradeData.trade_24h_change_percent
+        ) {
+            return false;
+        }
 
         return processedData.tradeData.trade_24h_change_percent < -50;
     }
@@ -384,6 +406,9 @@ export class TrustScoreProvider {
             recommenderId,
             isSimulation
         );
+        if (!trade) {
+            throw new Error("Trade not found");
+        }
         const buyTimeStamp = trade.buy_timeStamp;
         const marketCap =
             processedData.dexScreenerData.pairs[0]?.marketCap || 0;
