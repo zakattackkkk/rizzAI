@@ -19,11 +19,11 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 export const messageHandlerTemplate =
     // {{goals}}
-    //   `# Action Examples
-    // {{actionExamples}}
-    // (Action examples are for reference only. Do not use the information from them in your response.)
+    `# Action Examples
+{{actionExamples}}
+(Action examples are for reference only. Do not use the information from them in your response.)
 
-    `# Task: Generate dialog and actions for the character {{agentName}}.
+# Task: Generate dialog and actions for the character {{agentName}}.
 About {{agentName}}:
 {{bio}}
 {{lore}}
@@ -276,8 +276,7 @@ class DirectClient {
                     // Update state after response
                     state = await runtime.updateRecentMessageState(state);
                     await runtime.evaluate(memory, state);
-                    console.log("✅ Message handled successfully");
-                    console.log("📝 Response:", responseMessages);
+
                     // Handle any resulting actions
                     await runtime.processActions(
                         memory,
