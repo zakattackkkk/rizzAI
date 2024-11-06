@@ -11,6 +11,8 @@ import {
     Participant,
 } from "../core/types.ts";
 import { DatabaseAdapter } from "../core/database.ts";
+import { zeroUuid } from "../test_resources/constants.ts";
+import { embeddingZeroVector } from "../core/memory.ts";
 const { Pool } = pg;
 
 export class PostgresDatabaseAdapter extends DatabaseAdapter {
@@ -91,7 +93,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         const client = await this.pool.connect();
         try {
             const { rows } = await client.query(
-                `SELECT userState FROM participants WHERE "roomId" = $1 AND userId = $2`,
+                `SELECT "userState" FROM participants WHERE "roomId" = $1 AND "userId" = $2`,
                 [roomId, userId]
             );
             return rows.length > 0 ? rows[0].userState : null;
@@ -265,6 +267,8 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                     }
                 );
                 isUnique = similarMemories.length === 0;
+            }else{
+                memory.embedding = embeddingZeroVector
             }
 
             await client.query(
@@ -287,16 +291,24 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             client.release();
         }
     }
-
+  
     async searchMemories(params: {
         tableName: string;
         roomId: UUID;
+        agentId?: UUID;
         embedding: number[];
         match_threshold: number;
         match_count: number;
         unique: boolean;
     }): Promise<Memory[]> {
         const client = await this.pool.connect();
+
+        const queryParams = [
+            new Float32Array(params.embedding), // Ensure embedding is Float32Array
+            params.tableName,
+            params.roomId,
+            params.match_count,
+        ];
         try {
             let sql = `
         SELECT *,
@@ -309,16 +321,23 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                 sql += ` AND "unique" = true`;
             }
 
+
+        if (params.agentId) {
+            sql += " AND agentId = ?";
+            queryParams.push(params.agentId);
+        }
+
             sql += ` AND 1 - (embedding <-> $3) >= $4
                ORDER BY embedding <-> $3
                LIMIT $5`;
+
 
             const { rows } = await client.query(sql, [
                 params.tableName,
                 params.roomId,
                 params.embedding,
                 params.match_threshold,
-                params.match_count,
+                +params.match_count,
             ]);
 
             return rows.map((row) => ({
@@ -330,6 +349,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             client.release();
         }
     }
+
 
     async getMemories(params: {
         roomId: UUID;
@@ -352,13 +372,13 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.start) {
                 paramCount++;
                 sql += ` AND "createdAt" >= to_timestamp($${paramCount})`;
-                values.push(params.start/1000);
+                values.push(Math.round(params.start / 1000));
             }
 
             if (params.end) {
                 paramCount++;
                 sql += ` AND "createdAt" <= to_timestamp($${paramCount})`;
-                values.push(params.end/1000);
+                values.push(Math.round(params.end / 1000));
             }
 
             if (params.unique) {
@@ -366,7 +386,8 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             }
 
             if (params.agentId) {
-                sql += " AND agentId = $3";
+                paramCount++;
+                sql += ` AND "agentId" = $${paramCount}`;
                 values.push(params.agentId);
             }
 
@@ -375,7 +396,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.count) {
                 paramCount++;
                 sql += ` LIMIT $${paramCount}`;
-                values.push(params.count);
+                values.push(+params.count);
             }
 
             console.log("sql", sql, values);
@@ -418,7 +439,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.count) {
                 paramCount++;
                 sql += ` LIMIT $${paramCount}`;
-                values.push(params.count);
+                values.push(+params.count);
             }
 
             const { rows } = await client.query(sql, values);
@@ -580,7 +601,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                 opts.query_field_name,
                 opts.query_field_sub_name,
                 opts.query_table_name,
-                opts.query_match_count,
+                +opts.query_match_count,
             ]);
 
             return rows.map((row) => ({
@@ -640,7 +661,8 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             }
 
             if (params.agentId) {
-                sql += " AND agentId = $3";
+                paramCount++;
+                sql += ` AND "agentId" = $${paramCount}`;
                 values.push(params.agentId);
             }
 
@@ -661,7 +683,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.count) {
                 paramCount++;
                 sql += ` LIMIT $${paramCount}`;
-                values.push(params.count);
+                values.push(+params.count);
             }
 
             const { rows } = await client.query(sql, values);
