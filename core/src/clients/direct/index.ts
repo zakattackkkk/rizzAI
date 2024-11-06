@@ -13,6 +13,7 @@ import {
     generateCaption,
     generateImage,
 } from "../../actions/imageGenerationUtils.ts";
+import { embeddingZeroVector } from "../../core/memory.ts";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -122,142 +123,179 @@ class DirectClient {
         this.app.post(
             "/:agentId/message",
             async (req: express.Request, res: express.Response) => {
-                const agentId = req.params.agentId;
-                const roomId = stringToUuid(
-                    req.body.roomId ?? "default-room-" + agentId
-                );
-                const userId = stringToUuid(req.body.userId ?? "user");
+                // message handler filled by callback function on actions
+                const messages = [];
+                const sendMessageInChunks = async (content, id) => {
+                    messages.push({
+                        text: content.text,
+                        content: content,
+                        message_id: id,
+                    });
+                    return messages;
+                };
 
-                let runtime = this.agents.get(agentId);
-
-                // if runtime is null, look for runtime with the same name
-                if (!runtime) {
-                    runtime = Array.from(this.agents.values()).find(
-                        (a) =>
-                            a.character.name.toLowerCase() ===
-                            agentId.toLowerCase()
+                try {
+                    const agentId = req.params.agentId;
+                    const roomId = stringToUuid(
+                        req.body.roomId ?? "default-room-" + agentId
                     );
-                }
+                    const messageId = crypto.randomUUID();
+                    const userId = stringToUuid(req.body.userId ?? "user");
 
-                if (!runtime) {
-                    res.status(404).send("Agent not found");
-                    return;
-                }
+                    let runtime = this.agents.get(agentId);
 
-                await runtime.ensureConnection(
-                    userId,
-                    roomId,
-                    req.body.userName,
-                    req.body.name,
-                    "direct"
-                );
+                    // if runtime is null, look for runtime with the same name
+                    if (!runtime) {
+                        runtime = Array.from(this.agents.values()).find(
+                            (a) =>
+                                a.character.name.toLowerCase() ===
+                                agentId.toLowerCase()
+                        );
+                    }
 
-                const text = req.body.text;
-                const messageId = stringToUuid(Date.now().toString());
+                    if (!runtime) {
+                        res.status(404).send({
+                            success: false,
+                            error: "Agent not found",
+                        });
+                        return;
+                    }
 
-                const content: Content = {
-                    text,
-                    attachments: [],
-                    source: "direct",
-                    inReplyTo: undefined,
-                };
-
-                const userMessage = {
-                    content,
-                    userId,
-                    roomId,
-                    agentId: runtime.agentId,
-                };
-
-                const memory: Memory = {
-                    id: messageId,
-                    agentId: runtime.agentId,
-                    userId,
-                    roomId,
-                    content,
-                    createdAt: Date.now(),
-                };
-
-                await runtime.messageManager.createMemory(memory);
-
-                const state = (await runtime.composeState(userMessage, {
-                    agentName: runtime.character.name,
-                })) as State;
-
-                const context = composeContext({
-                    state,
-                    template: messageHandlerTemplate,
-                });
-
-                const response = await generateMessageResponse({
-                    runtime: runtime,
-                    context,
-                    modelClass: ModelClass.SMALL,
-                });
-
-                // save response to memory
-                const responseMessage = {
-                    ...userMessage,
-                    userId: runtime.agentId,
-                    content: response,
-                };
-
-                await runtime.messageManager.createMemory(responseMessage);
-
-                // TODO: Improve action loop
-                if (response?.action) {
-                    const actions = [];
-                    await runtime.processActions(
-                        memory,
-                        [responseMessage],
-                        state,
-                        // @ts-ignore
-                        async (response) => {
-                            actions.push(response);
-                        }
+                    await runtime.ensureConnection(
+                        userId,
+                        roomId,
+                        req.body.userName,
+                        req.body.name,
+                        "direct"
                     );
 
-                    // TODO: duplicate compose to get latest state, refactor to add in runtime.getState
+                    const text = req.body.text;
 
-                    const actionState = (await runtime.composeState(
-                        userMessage,
-                        {
-                            agentName: runtime.character.name,
-                        }
-                    )) as State;
+                    const content: Content = {
+                        text,
+                        attachments: [],
+                        source: "direct",
+                        inReplyTo: undefined,
+                    };
+
+                    const userMessage = {
+                        content,
+                        userId,
+                        roomId,
+                        agentId: runtime.agentId,
+                    };
+
+                    const memory: Memory = {
+                        id: messageId,
+                        agentId: runtime.agentId,
+                        userId,
+                        roomId,
+                        content,
+                        createdAt: Date.now(),
+                    };
+
+                    await runtime.messageManager.createMemory(memory);
+
+                    // Update state with the new memory
+                    let state = await runtime.composeState(memory);
+                    state = await runtime.updateRecentMessageState(state);
 
                     const context = composeContext({
-                        state: actionState,
-                        template: `
-                        About {{agentName}}:
-                        {{bio}}
-                        {{lore}}
-                      
-                                                    
-                        Recent Messages
-                        {{recentMessages}}
-                        
-        
-                        [SYSTEM] Actions completed, now respond to user given the actions outputs.
-                        # Instructions: Write the next message for {{agentName}}.`,
+                        state,
+                        template: messageHandlerTemplate,
                     });
-                    const _response = await generateMessageResponse({
+
+                    const responseContent = await generateMessageResponse({
                         runtime: runtime,
-                        context: context,
+                        context,
                         modelClass: ModelClass.SMALL,
                     });
-                    res.json(_response);
-                    return;
-                }
 
-                if (!response) {
-                    res.status(500).send(
-                        "No response from generateMessageResponse"
+                    // save response to memory
+                    const responseMessage = {
+                        ...userMessage,
+                        userId: runtime.agentId,
+                        content: responseContent,
+                    };
+
+                    await runtime.messageManager.createMemory(responseMessage);
+
+                    if (!responseContent || !responseContent.text) {
+                        res.json({
+                            success: false,
+                            error: "No response generated",
+                        });
+                        return;
+                    }
+
+                    // Send response collecting chunks
+                    const callback = async (content: Content) => {
+                        const sentMessages = await sendMessageInChunks(
+                            content,
+                            messageId
+                        );
+
+                        const memories: Memory[] = [];
+
+                        // Create memories for each sent message
+                        for (let i = 0; i < sentMessages.length; i++) {
+                            const sentMessage = sentMessages[i];
+                            const isLastMessage = i === sentMessages.length - 1;
+
+                            const memory: Memory = {
+                                id: stringToUuid(
+                                    sentMessage.message_id.toString() +
+                                        "-" +
+                                        runtime.agentId
+                                ),
+                                agentId: runtime.agentId,
+                                userId,
+                                roomId,
+                                content: {
+                                    ...content,
+                                    text: sentMessage.text,
+                                    action: !isLastMessage
+                                        ? "CONTINUE"
+                                        : content.action,
+                                    inReplyTo: messageId,
+                                },
+                                createdAt: sentMessage.date * 1000,
+                                embedding: embeddingZeroVector,
+                            };
+
+                            await runtime.messageManager.createMemory(memory);
+                            memories.push(memory);
+                        }
+
+                        return memories;
+                    };
+
+                    // Execute callback to send messages and log memories
+                    const responseMessages = await callback(responseContent);
+
+                    // Update state after response
+                    state = await runtime.updateRecentMessageState(state);
+                    await runtime.evaluate(memory, state);
+                    console.log("✅ Message handled successfully");
+                    console.log("📝 Response:", responseMessages);
+                    // Handle any resulting actions
+                    await runtime.processActions(
+                        memory,
+                        responseMessages,
+                        state,
+                        callback
                     );
-                    return;
+                } catch (error) {
+                    console.error("❌ Error handling message:", error);
+                    res.json({
+                        success: false,
+                        error:
+                            error.message ||
+                            "Sorry, I encountered an error while processing your request.",
+                    });
+                } finally {
+                    res.json({ success: true, data: messages });
                 }
-
-                res.json(response);
             }
         );
 

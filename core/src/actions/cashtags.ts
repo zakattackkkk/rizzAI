@@ -7,9 +7,11 @@ import {
     Memory,
     State,
     UUID,
+    ModelClass,
 } from "../core/types.ts";
-import { embeddingZeroVector } from "../core/memory.ts";
-import { log_to_file } from "../core/logger.ts";
+
+import { composeContext } from "../core/context.ts";
+import { generateText } from "../core/generation.ts";
 
 const API_URL = "https://api.dexscreener.com";
 
@@ -52,14 +54,23 @@ interface DexScreenerResponse {
     schemaVersion: string;
     pairs: TokenPair[];
 }
+export const cashtagHandlerTemplate = `
+
+{{recentMessages}}
+
+{{attachments}}
+
+{{messageDirections}}
+
+# Instructions: Respond with a short message max 50 words in responses the users last message - respond in PLAIN TEXT (do not use Markdown) with the asked for token information always include the Dexscreener URL and Current Market Cap unless asked otherwise`;
 
 /**
  * Cleans a string by removing dollar signs, spaces, and converting to lowercase
- * 
+ *
  * @param {string} input - The string to clean
  * @returns {string} The cleaned string
  * @throws {Error} If input is not a string
- * 
+ *
  * @example
  * cleanString("$Hello World$") // returns "helloworld"
  * cleanString("$100.00 USD") // returns "100.00usd"
@@ -67,17 +78,16 @@ interface DexScreenerResponse {
  */
 function cleanString(input) {
     // Input validation
-    if (typeof input !== 'string') {
-        throw new Error('Input must be a string');
+    if (typeof input !== "string") {
+        throw new Error("Input must be a string");
     }
 
     // Remove dollar signs, remove spaces, and convert to lowercase
     return input
-        .replace(/\$/g, '')  // Remove all dollar signs
-        .replace(/\s+/g, '') // Remove all whitespace (spaces, tabs, newlines)
-        .toLowerCase();       // Convert to lowercase
+        .replace(/\$/g, "") // Remove all dollar signs
+        .replace(/\s+/g, "") // Remove all whitespace (spaces, tabs, newlines)
+        .toLowerCase(); // Convert to lowercase
 }
-
 
 function calculatePairScore(pair: TokenPair): number {
     let score = 0;
@@ -153,7 +163,7 @@ export const cashtags: Action = {
     description:
         "Searches for the best matching token pair (ca) or $cashtag ($SOL) based on age, liquidity, volume, and transaction count",
     validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
-        return true
+        return true;
     },
     handler: async (
         runtime: IAgentRuntime,
@@ -165,16 +175,16 @@ export const cashtags: Action = {
         const userId = runtime.agentId;
         const { roomId } = message;
 
-       
         // Extract cashtag from message
         const cashtag = message.content.text
             .match(/\$[A-Za-z]+/)?.[0]
             ?.replace("$", "");
+        let responseContent;
 
         const callbackData: Content = {
             text: undefined,
             action: "FIND_BEST_MATCH_RESPONSE",
-            source: "DexScreener",
+            source: "DEXSCREENER",
             attachments: [],
         };
 
@@ -184,12 +194,16 @@ export const cashtags: Action = {
             //     action: "FIND_BEST_MATCH_RESPONSE",
             //     source: "DexScreener",
             // });
-            callbackData.text= "No cashtag found in the message. Please include a cashtag (e.g. $PNUT)";
-               
+            callbackData.text =
+                "No cashtag found in the message. Please include a cashtag (e.g. $PNUT)";
+
             return;
         }
 
-        console.log(`[${roomId}] Processing FIND_BEST_MATCH request... $`, cashtag);
+        console.log(
+            `[${roomId}] Processing FIND_BEST_MATCH request... $`,
+            cashtag
+        );
 
         try {
             const { data: bestMatch, error } = await searchCashTags(cashtag);
@@ -199,13 +213,12 @@ export const cashtags: Action = {
                 // callback(callbackData);
                 return;
             }
-            console.log(bestMatch);
 
             // Format response
             const responseText = `
             Best match for $${cashtag}:
             Token: ${bestMatch.baseToken.name} (${bestMatch.baseToken.symbol})
-            MCAP: $${(bestMatch.marketCap).toFixed(2)}M
+            MCAP: $${bestMatch.marketCap.toFixed(2)}M
             Age: ${Math.floor((Date.now() - bestMatch.pairCreatedAt) / (1000 * 60 * 60 * 24))} days
             Liquidity: $${bestMatch.liquidity.usd.toLocaleString()}
             24h Volume: $${bestMatch.volume.h24.toLocaleString()}
@@ -216,10 +229,7 @@ export const cashtags: Action = {
 
             URL: ${bestMatch.url}`;
 
-            callbackData.text =  `Create a reply with the token information for $${cashtag}.
-                Message from user - ${message.content.text}
-                Token information - ${responseText}
-                `;
+            callbackData.text = responseText;
 
             // Store the full response as an attachment
             const attachmentId =
@@ -230,12 +240,10 @@ export const cashtags: Action = {
                 id: attachmentId,
                 url: bestMatch.url,
                 title: `Best Match for $${cashtag}`,
-                source: "DexScreener",
+                source: "DEXSCREENER",
                 description: `Token analysis for ${bestMatch.baseToken.symbol}`,
-                text: JSON.stringify(bestMatch, null, 2)
-            })
-
-            // callback(callbackData);
+                text: JSON.stringify(bestMatch, null, 2),
+            });
 
             // Log to database
             runtime.databaseAdapter.log({
@@ -244,30 +252,60 @@ export const cashtags: Action = {
                 roomId,
                 type: "dexscreener",
             });
-
-            // Create memory
-            const memory = {
-                userId,
-                agentId: runtime.agentId,
-                content: callbackData,
-                roomId,
-                embedding: embeddingZeroVector,
-            };
-            
-
-            await runtime.messageManager.createMemory(memory);
-            const response = await runtime.evaluate(message, state);
-
-
         } catch (error) {
             console.error("Error in findBestMatch:", error);
             callbackData.text = `Error processing request: ${error.message}`;
             callback(callbackData);
+            return;
         }
 
-        console.log(callbackData);
-        typeof callback === "function" && callback(callbackData);
+        const memory: Memory = {
+            agentId: runtime.agentId,
+            userId,
+            roomId,
+            content: callbackData,
+            createdAt: Date.now(),
+        };
 
+        // Update state with the new memory
+        state = await runtime.composeState(memory);
+
+        const context = composeContext({
+            state,
+            template: cashtagHandlerTemplate,
+        });
+
+        responseContent = await generateText({
+            runtime,
+            context,
+            modelClass: ModelClass.SMALL,
+        });
+
+        if (!responseContent) {
+            return;
+        }
+        const agentMessage = {
+            userId,
+            roomId,
+            agentId: runtime.agentId,
+        };
+
+        const content = {
+            text: responseContent,
+            action: "FIND_BEST_MATCH_RESPONSE",
+            source: "DEXSCREENER",
+        };
+
+        // save response to memory
+        const responseMessage = {
+            ...agentMessage,
+            userId: runtime.agentId,
+            content: content,
+        };
+
+        await runtime.messageManager.createMemory(responseMessage);
+        callbackData.content = responseContent;
+        callback(content);
         return callbackData;
     },
     examples: [
