@@ -19,7 +19,7 @@ tweets/
 *.onnx
 *.wav
 *.mp3
-
+*.code-workspace
 logs/
 
 test-report.json
