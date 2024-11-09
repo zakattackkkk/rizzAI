@@ -34,32 +34,48 @@ async function swapToken(
     amount: number
 ): Promise<any> {
     try {
+): Promise<any> {
+        // Ensure input values are valid
+        if (!inputTokenCA || !outputTokenCA || amount === undefined || amount === null) {
+            throw new Error('Invalid input parameters for swapToken');
+        }
         // Get the decimals for the input token
-        const decimals =
+        const decimals = new BigNumber(
             inputTokenCA === settings.SOL_ADDRESS
-                ? new BigNumber(9)
-                : new BigNumber(
-                      await getTokenDecimals(connection, inputTokenCA)
-                  );
+                ? 9
+                : await getTokenDecimals(connection, inputTokenCA)
+        );
+        const decimals =
+        console.log('Decimals:', decimals.toString());
 
+        if (decimals.isNaN() || !decimals.isFinite()) {
+            throw new Error('Invalid token decimals');
+        }
         console.log("Decimals:", decimals.toString());
-
         // Use BigNumber for adjustedAmount: amount * (10 ** decimals)
         const amountBN = new BigNumber(amount);
+        if (amountBN.isNaN() || !amountBN.isFinite()) {
+            throw new Error('Invalid amount');
+        }
+        // Use BigNumber for adjustedAmount: amount * (10 ** decimals)
         const adjustedAmount = amountBN.multipliedBy(
             new BigNumber(10).pow(decimals)
         );
+        const adjustedAmount = amountBN.multipliedBy(
+        if (adjustedAmount.isNaN() || !adjustedAmount.isFinite()) {
+            throw new Error('Invalid adjusted amount');
+        }
 
-        console.log("Fetching quote with params:", {
+        console.log('Fetching quote with params:', {
             inputMint: inputTokenCA,
             outputMint: outputTokenCA,
-            amount: adjustedAmount,
+            amount: adjustedAmount.toString(),
         });
-
+        console.log("Fetching quote with params:", {
         const quoteResponse = await fetch(
-            `https://quote-api.jup.ag/v6/quote?inputMint=${inputTokenCA}&outputMint=${outputTokenCA}&amount=${adjustedAmount}&slippageBps=50`
+            `https://quote-api.jup.ag/v6/quote?inputMint=${inputTokenCA}&outputMint=${outputTokenCA}&amount=${adjustedAmount.toString()}&slippageBps=50`
         );
-        const quoteData = await quoteResponse.json();
+        const quoteResponse = await fetch(
 
         if (!quoteData || quoteData.error) {
             console.error("Quote error:", quoteData);
@@ -100,10 +116,11 @@ async function swapToken(
         console.log("Swap transaction received");
         return swapData;
     } catch (error) {
-        console.error("Error in swapToken:", error);
+        console.error('Error in swapToken:', error);
         throw error;
     }
 }
+    } catch (error) {
 
 const swapTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
 
