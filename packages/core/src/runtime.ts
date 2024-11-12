@@ -158,8 +158,8 @@ export class AgentRuntime implements IAgentRuntime {
         }
         return serviceInstance as T;
     }
-    registerService(service: Service): void {
-        const serviceType = (service as typeof Service).serviceType;
+    registerService(ServiceType: typeof Service): void {
+        const serviceType = ServiceType.serviceType;
         console.log("Registering service:", serviceType);
         if (this.services.has(serviceType)) {
             console.warn(
@@ -168,7 +168,7 @@ export class AgentRuntime implements IAgentRuntime {
             return;
         }
 
-        this.services.set((service as typeof Service).serviceType, service);
+        this.services.set(ServiceType.serviceType, new (ServiceType as unknown as new () => Service)());
     }
 
     /**
@@ -249,7 +249,7 @@ export class AgentRuntime implements IAgentRuntime {
             tableName: "fragments",
         });
 
-        (opts.services ?? []).forEach((service: Service) => {
+        (opts.services ?? []).forEach((service: typeof Service) => {
             this.registerService(service);
         });
 

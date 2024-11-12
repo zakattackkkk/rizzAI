@@ -1,6 +1,7 @@
 // @ts-nocheck
 // src/actions/joinVoice
 import { joinVoiceChannel } from "@discordjs/voice";
+import { generateText } from "@ai16z/eliza/src/generation.ts";
 import {
     Channel,
     ChannelType,
@@ -15,6 +16,7 @@ import {
     ActionExample,
     IAgentRuntime,
     Memory,
+    ModelClass,
     State,
 } from "@ai16z/eliza/src/types.ts";
 

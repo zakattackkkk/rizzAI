@@ -314,7 +314,7 @@ export type Plugin = {
     actions?: Action[];
     providers?: Provider[];
     evaluators?: Evaluator[];
-    services?: Service[];
+    services?: (typeof Service)[];
 };
 
 export enum Clients {

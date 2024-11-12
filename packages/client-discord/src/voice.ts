@@ -193,23 +193,28 @@ export class VoiceManager extends EventEmitter {
         const oldChannelId = oldState.channelId;
         const newChannelId = newState.channelId;
         const member = newState.member;
+        console.log("000", oldChannelId, newChannelId, member);
         if (!member) return;
         if (member.id === this.client.user?.id) {
+            console.log("0");
             return;
         }
 
         // Ignore mute/unmute events
         if (oldChannelId === newChannelId) {
+            console.log("1");
             return;
         }
 
         // User leaving a channel where the bot is present
         if (oldChannelId && this.connections.has(oldChannelId)) {
+            console.log("2");
             this.stopMonitoringMember(member.id);
         }
 
         // User joining a channel where the bot is present
         if (newChannelId && this.connections.has(newChannelId)) {
+            console.log("3");
             await this.monitorMember(
                 member,
                 newState.channel as BaseGuildVoiceChannel
@@ -407,6 +412,11 @@ export class VoiceManager extends EventEmitter {
                         transcriptionText += text;
                     } catch (error) {
                         console.error("Error processing audio stream:", error);
+                        console.log(this.runtime);
+                        console.log(this.runtime.getService<ITranscriptionService>(
+                                ServiceType.TRANSCRIPTION
+                            ));
+                        console.log(this.runtime.services);
                     }
                 }
 
