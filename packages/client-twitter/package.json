@@ -6,8 +6,10 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@ai16z/eliza": "workspace:*",
+        "@types/sqlite3": "^3.1.11",
+        "agent-twitter-client": "0.0.13",
         "glob": "11.0.0",
-        "agent-twitter-client": "0.0.13"
+        "sqlite3": "^5.1.7"
     },
     "devDependencies": {
         "tsup": "^8.3.5"
