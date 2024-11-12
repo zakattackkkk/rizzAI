@@ -1,6 +1,6 @@
-import { ApprovalQueue } from './approval-queue';
-import { CLIApproval } from './cli-approval';
-import { WebApprovalInterface } from './web/approval-interface';
+import { ApprovalQueue } from './approval-queue.js';
+import { CLIApproval } from './cli-approval.js';
+import { WebApprovalInterface } from './web/approval-interface.js';
 
 async function testApprovalSystem() {
     try {

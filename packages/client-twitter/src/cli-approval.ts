@@ -1,4 +1,4 @@
-import { ApprovalQueue, PendingTweet } from './approval-queue';
+import { ApprovalQueue, PendingTweet } from './approval-queue.js';
 import readline from 'readline';
 import { promisify } from 'util';
 
