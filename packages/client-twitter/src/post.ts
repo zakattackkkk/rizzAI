@@ -224,36 +224,4 @@ export class TwitterPostClient extends ClientBase {
             console.error("Error generating new tweet:", error);
         }
     }
-                    tweet.conversationId + "-" + this.runtime.agentId;
-                const roomId = stringToUuid(conversationId);
-
-                // make sure the agent is in the room
-                await this.runtime.ensureRoomExists(roomId);
-                await this.runtime.ensureParticipantInRoom(
-                    this.runtime.agentId,
-                    roomId
-                );
-
-                await this.cacheTweet(tweet);
-
-                await this.runtime.messageManager.createMemory({
-                    id: stringToUuid(postId + "-" + this.runtime.agentId),
-                    userId: this.runtime.agentId,
-                    agentId: this.runtime.agentId,
-                    content: {
-                        text: newTweetContent.trim(),
-                        url: tweet.permanentUrl,
-                        source: "twitter",
-                    },
-                    roomId,
-                    embedding: embeddingZeroVector,
-                    createdAt: tweet.timestamp * 1000,
-                });
-            } catch (error) {
-                console.error("Error sending tweet:", error);
-            }
-        } catch (error) {
-            console.error("Error generating new tweet:", error);
-        }
-    }
 }
