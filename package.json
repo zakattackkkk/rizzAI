@@ -32,6 +32,7 @@
         "node": ">=22"
     },
     "dependencies": {
+        "@11labs/client": "^0.0.2",
         "ollama-ai-provider": "^0.16.1",
         "optional": "^0.1.4",
         "sharp": "^0.33.5"

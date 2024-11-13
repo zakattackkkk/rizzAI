@@ -1,0 +1,4 @@
+# Eliza Configuration
+actions: []
+clients:
+  - twitter
