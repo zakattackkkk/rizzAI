@@ -11,7 +11,7 @@ export class WebApprovalInterface {
     private app: express.Express;
     private port: number;
 
-    constructor(queue: ApprovalQueue, port: number = 3001) {
+    constructor(queue: ApprovalQueue, port: number = Number(process.env.SERVER_PORT) || 3000) {
         this.queue = queue;
         this.port = port;
         this.app = express();
@@ -19,21 +19,17 @@ export class WebApprovalInterface {
     }
 
     private setupRoutes(): void {
-        // Serve static files
         this.app.use(express.static(path.join(__dirname)));
         this.app.use(express.json());
 
-        // Root redirect to approval interface
         this.app.get('/', (req, res) => {
             res.redirect('/twitter-approval');
         });
 
-        // Main approval interface
         this.app.get('/twitter-approval', (req, res) => {
             res.sendFile(path.join(__dirname, 'approval.html'));
         });
 
-        // API Routes
         this.app.get('/api/twitter/pending-tweets', async (req, res) => {
             try {
                 const tweets = await this.queue.list('pending');
@@ -66,12 +62,10 @@ export class WebApprovalInterface {
             }
         });
 
-        // 404 handler for unmatched routes
         this.app.use((req, res) => {
             res.status(404).json({ error: 'Not found' });
         });
 
-        // Error handling middleware
         this.app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
             console.error('Server error:', err);
             res.status(500).json({ error: 'Internal server error' });
@@ -88,7 +82,6 @@ export class WebApprovalInterface {
     }
 
     async stop(): Promise<void> {
-        // Cleanup and close resources
         await this.queue.close();
     }
 
