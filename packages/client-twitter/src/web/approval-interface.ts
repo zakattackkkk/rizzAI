@@ -94,7 +94,7 @@ export class WebApprovalInterface {
     }
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     (async () => {
         const approvalInterface = await WebApprovalInterface.create();
         try {
