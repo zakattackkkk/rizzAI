@@ -21,7 +21,6 @@ export class ApprovalQueue {
     private dbPath: string;
     private defaultTimeout: number;
     private webhookUrl?: string;
-
     constructor(
         dbPath?: string,
         defaultTimeout: number = 24 * 60 * 60 * 1000,
@@ -31,7 +30,10 @@ export class ApprovalQueue {
         this.db = new Database(this.dbPath);
         this.defaultTimeout = defaultTimeout;
         this.webhookUrl = webhookUrl;
-        this.initialize();
+    }
+
+    async init(): Promise<void> {
+        await this.initialize();
     }
 
     private async initialize(): Promise<void> {

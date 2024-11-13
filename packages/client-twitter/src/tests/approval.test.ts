@@ -7,13 +7,6 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Extend existing fetch type declaration
-declare global {
-    interface Window {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-    }
-}
-
 describe('ApprovalQueue', () => {
     let approvalQueue: ApprovalQueue;
     const testDbPath = path.join(__dirname, 'test-approval-queue.db');
@@ -29,6 +22,7 @@ describe('ApprovalQueue', () => {
             fs.unlinkSync(testDbPath);
         }
         approvalQueue = new ApprovalQueue(testDbPath, testTimeout, mockWebhookUrl);
+        await approvalQueue.init();
         webhookCalls = [];
 
         // Setup fetch mock
