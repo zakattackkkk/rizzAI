@@ -21,6 +21,7 @@ export class ApprovalQueue {
     private dbPath: string;
     private defaultTimeout: number;
     private webhookUrl?: string;
+
     constructor(
         dbPath?: string,
         defaultTimeout: number = 24 * 60 * 60 * 1000,
@@ -54,7 +55,8 @@ export class ApprovalQueue {
 
     async add(content: string, metadata: any = {}, timeout?: number): Promise<string> {
         const run = promisify(this.db.run.bind(this.db));
-        const id = Date.now().toString();
+        // Ensure unique IDs even for rapid additions by including a random component
+        const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const expiresAt = new Date(Date.now() + (timeout || this.defaultTimeout));
         await run(
             'INSERT INTO pending_tweets (id, content, metadata, expires_at) VALUES (?, ?, ?, ?)',
@@ -65,20 +67,27 @@ export class ApprovalQueue {
 
     async approve(id: string): Promise<void> {
         const run = promisify(this.db.run.bind(this.db));
+        // First check if the tweet exists and its status
+        const tweet = await this.get(id);
+        if (!tweet) {
+            throw new Error(`Tweet ${id} not found`);
+        }
+        // Check expiration before status to ensure correct error message
+        if (tweet.expiresAt <= new Date()) {
+            throw new Error(`Tweet ${id} has expired and cannot be approved`);
+        }
+        if (tweet.status !== 'pending') {
+            throw new Error(`Tweet ${id} is not in pending status`);
+        }
+
         const result = await run(
             'UPDATE pending_tweets SET status = ? WHERE id = ? AND status = ? AND expires_at > ?',
             ['approved', id, 'pending', new Date().toISOString()]
-        );
-        if (result.changes === 0) {
-            throw new Error(`Tweet ${id} not found, not in pending status, or has expired`);
-        }
+        ) as { lastID: number, changes: number };
 
         // Send webhook notification if configured
         if (this.webhookUrl) {
-            const tweet = await this.get(id);
-            if (tweet) {
-                await this.sendWebhookNotification('approved', tweet);
-            }
+            await this.sendWebhookNotification('approved', tweet);
         }
     }
 
@@ -87,8 +96,9 @@ export class ApprovalQueue {
         const result = await run(
             'UPDATE pending_tweets SET status = ? WHERE id = ? AND status = ? AND expires_at > ?',
             ['rejected', id, 'pending', new Date().toISOString()]
-        );
-        if (result.changes === 0) {
+        ) as { lastID: number, changes: number };
+
+        if (result?.changes === 0) {
             throw new Error(`Tweet ${id} not found, not in pending status, or has expired`);
         }
 
@@ -137,14 +147,13 @@ export class ApprovalQueue {
         }));
     }
 
-    private async cleanupExpired(): Promise<void> {
+    protected async cleanupExpired(): Promise<void> {
         const run = promisify(this.db.run.bind(this.db));
         await run(
             'UPDATE pending_tweets SET status = ? WHERE status = ? AND expires_at <= ?',
             ['rejected', 'pending', new Date().toISOString()]
         );
     }
-
     async cleanupOld(maxAge: number): Promise<void> {
         const run = promisify(this.db.run.bind(this.db));
         const cutoff = new Date(Date.now() - maxAge);
