@@ -23,6 +23,11 @@ export class WebApprovalInterface {
         this.app.use(express.static(path.join(__dirname)));
         this.app.use(express.json());
 
+        // Root redirect to approval interface
+        this.app.get('/', (req, res) => {
+            res.redirect('/twitter-approval');
+        });
+
         // Main approval interface
         this.app.get('/twitter-approval', (req, res) => {
             res.sendFile(path.join(__dirname, 'approval.html'));
@@ -59,6 +64,11 @@ export class WebApprovalInterface {
                 console.error('Error rejecting tweet:', error);
                 res.status(500).json({ error: 'Failed to reject tweet' });
             }
+        });
+
+        // 404 handler for unmatched routes
+        this.app.use((req, res) => {
+            res.status(404).json({ error: 'Not found' });
         });
 
         // Error handling middleware
