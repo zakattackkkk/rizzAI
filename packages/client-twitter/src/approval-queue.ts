@@ -19,11 +19,17 @@ export class ApprovalQueue {
     private db: Database;
     private dbPath: string;
     private defaultTimeout: number;
+    private webhookUrl?: string;
 
-    constructor(dbPath?: string, defaultTimeout: number = 24 * 60 * 60 * 1000) {
+    constructor(
+        dbPath?: string,
+        defaultTimeout: number = 24 * 60 * 60 * 1000,
+        webhookUrl?: string
+    ) {
         this.dbPath = dbPath || path.join(__dirname, 'approval-queue.db');
         this.db = new Database(this.dbPath);
         this.defaultTimeout = defaultTimeout;
+        this.webhookUrl = webhookUrl;
         this.initialize();
     }
 
@@ -63,6 +69,14 @@ export class ApprovalQueue {
         if (result.changes === 0) {
             throw new Error(`Tweet ${id} not found, not in pending status, or has expired`);
         }
+
+        // Send webhook notification if configured
+        if (this.webhookUrl) {
+            const tweet = await this.get(id);
+            if (tweet) {
+                await this.sendWebhookNotification('approved', tweet);
+            }
+        }
     }
 
     async reject(id: string): Promise<void> {
@@ -73,6 +87,14 @@ export class ApprovalQueue {
         );
         if (result.changes === 0) {
             throw new Error(`Tweet ${id} not found, not in pending status, or has expired`);
+        }
+
+        // Send webhook notification if configured
+        if (this.webhookUrl) {
+            const tweet = await this.get(id);
+            if (tweet) {
+                await this.sendWebhookNotification('rejected', tweet);
+            }
         }
     }
 
@@ -132,5 +154,35 @@ export class ApprovalQueue {
     async close(): Promise<void> {
         const close = promisify(this.db.close.bind(this.db));
         await close();
+    }
+
+    private async sendWebhookNotification(action: 'approved' | 'rejected', tweet: PendingTweet): Promise<void> {
+        if (!this.webhookUrl) return;
+
+        try {
+            const response = await fetch(this.webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action,
+                    tweet: {
+                        id: tweet.id,
+                        content: tweet.content,
+                        metadata: tweet.metadata,
+                        createdAt: tweet.createdAt,
+                        status: tweet.status,
+                        expiresAt: tweet.expiresAt,
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                console.error(`Failed to send webhook notification: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error('Error sending webhook notification:', error);
+        }
     }
 }
