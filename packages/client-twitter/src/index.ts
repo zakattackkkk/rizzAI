@@ -1,12 +1,15 @@
 import { TwitterPostClient } from "./post.ts";
 import { TwitterSearchClient } from "./search.ts";
 import { TwitterInteractionClient } from "./interactions.ts";
+import { CheshireBot } from "./cheshire.ts";
 import { IAgentRuntime, Client } from "@ai16z/eliza/src/types.ts";
 
 class TwitterAllClient {
     post: TwitterPostClient;
     search: TwitterSearchClient;
     interaction: TwitterInteractionClient;
+    cheshire: CheshireBot;
+
     constructor(runtime: IAgentRuntime) {
         this.post = new TwitterPostClient(runtime);
         // this.search = new TwitterSearchClient(runtime); // don't start the search client by default
@@ -14,6 +17,7 @@ class TwitterAllClient {
         // burns your rate limit and can get your account banned
         // use at your own risk
         this.interaction = new TwitterInteractionClient(runtime);
+        this.cheshire = new CheshireBot(runtime);
     }
 }
 
@@ -28,3 +32,4 @@ export const TwitterClientInterface: Client = {
 };
 
 export default TwitterClientInterface;
+export { CheshireBot, createCheshireBot } from "./cheshire.ts";

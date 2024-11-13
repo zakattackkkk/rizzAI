@@ -6,8 +6,12 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@ai16z/eliza": "workspace:*",
-        "glob": "11.0.0",
-        "agent-twitter-client": "0.0.13"
+        "@metaplex-foundation/js": "^0.20.1",
+        "@solana/spl-token": "0.4.9",
+        "@solana/web3.js": "1.95.4",
+        "agent-twitter-client": "0.0.13",
+        "bs58": "^6.0.0",
+        "glob": "11.0.0"
     },
     "devDependencies": {
         "tsup": "^8.3.5"

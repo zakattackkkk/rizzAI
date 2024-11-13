@@ -6,11 +6,50 @@ import { embeddingZeroVector } from "@ai16z/eliza/src/memory.ts";
 import { IAgentRuntime, ModelClass } from "@ai16z/eliza/src/types.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 import { ClientBase } from "./base.ts";
-import { LangChain, Groq } from "@lang-chain/core";
 
-// Define the Cheshire bot's settings
+// Cheshire Cat Bot Settings
 const TWITTER_USERNAME = "your_twitter_username";
-const CHARACTER_NAME = "Cheshire";
+const CHARACTER_NAME = "cheshire";
+const CHARACTER_TEMPLATE = `
+# Character: Cheshire - The Solana Degen Cat
+
+## Personality
+- A mysterious, mischievous crypto cat from the trenches of Solana
+- Speaks in riddles and cat-themed metaphors
+- Always lands on their feet in the crypto markets
+- Has 9 lives worth of trading experience
+- Purrs at green candles, hisses at rugs
+
+## Knowledge
+- Deep understanding of Solana ecosystem
+- Expert in DeFi, NFTs, and meme coins
+- Tracks degen plays and alpha
+- Understands market sentiment and trends
+- Follows major Solana protocols and projects
+
+## Speech Style
+- Uses cat puns and metaphors
+- Mixes crypto slang with feline expressions
+- Often ends sentences with "meow" or "purr"
+- Playful but insightful
+- Sometimes speaks in riddles
+
+## Topics
+- Solana DeFi protocols
+- New project launches
+- Market analysis (in cat terms)
+- Trading strategies
+- NFT projects
+- Meme coins
+- Degen plays
+
+## Example Tweets
+- "Purring at these $SOL gains while other chains are stuck in a catnap 😺"
+- "Just pounced on some fresh alpha in the Solana jungle... meow you see it, meow you don't 🐱"
+- "These paper paws can't handle the heat... real diamond claws hold through the dips 💎🐾"
+- "New NFT project looking purrfect for a quick flip. Time to sharpen these trading claws 🔄"
+- "Spotted a juicy degen play... my whiskers are tingling with alpha 🐱"
+`;
 
 export class CheshireBot extends ClientBase {
     constructor(runtime: IAgentRuntime) {
@@ -67,14 +106,27 @@ export class CheshireBot extends ClientBase {
                 {
                     twitterUsername: this.runtime.getSetting(TWITTER_USERNAME),
                     timeline: formattedHomeTimeline,
+                    characterInfo: CHARACTER_TEMPLATE,
                 }
             );
 
             const context = composeContext({
                 state,
-                template:
-                    this.runtime.character.templates?.twitterPostTemplate ||
-                    `# ${CHARACTER_NAME}'s Home Timeline\n\n${formattedHomeTimeline}\n\n# ${CHARACTER_NAME}'s New Tweet\n\n`,
+                template: `
+${CHARACTER_TEMPLATE}
+
+# Current Timeline
+${formattedHomeTimeline}
+
+# Task
+Generate a single tweet as Cheshire, the Solana degen cat. The tweet should:
+- Be cat-themed and crypto-focused
+- Include relevant Solana ecosystem insights
+- Use playful cat puns or metaphors
+- Be concise and engaging
+- End with an appropriate emoji
+
+Write only the tweet text, no additional commentary.`,
             });
 
             const newTweetContent = await generateText({
@@ -155,23 +207,15 @@ export class CheshireBot extends ClientBase {
 
     private async fetchAndCacheTweets() {
         try {
-            const groqQuery = Groq.query(`
-                *[_type == "tweet"] {
-                    id,
-                    text,
-                    conversationId,
-                    createdAt,
-                    userId,
-                    inReplyToStatusId,
-                    permanentUrl
+            // Search for Solana-related tweets
+            const response = await fetch(
+                `https://api.twitter.com/2/tweets/search/recent?query=from:${this.runtime.getSetting(TWITTER_USERNAME)} OR #Solana OR $SOL&max_results=100`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${this.runtime.getSetting("TWITTER_TOKEN")}`,
+                    },
                 }
-            `);
-
-            const response = await fetch(`https://api.twitter.com/2/tweets?query=${groqQuery}&limit=100`, {
-                headers: {
-                    "Authorization": `Bearer ${this.runtime.getSetting("TWITTER_TOKEN")}`,
-                },
-            });
+            );
 
             if (!response.ok) {
                 throw new Error(response.statusText);
@@ -190,11 +234,33 @@ export class CheshireBot extends ClientBase {
         try {
             await this.fetchAndCacheTweets();
 
+            const state = await this.runtime.composeState(
+                {
+                    userId: this.runtime.agentId,
+                    roomId: stringToUuid("twitter_schedule_room"),
+                    agentId: this.runtime.agentId,
+                    content: { text: "", action: "" },
+                },
+                {
+                    twitterUsername: this.runtime.getSetting(TWITTER_USERNAME),
+                    characterInfo: CHARACTER_TEMPLATE,
+                }
+            );
+
+            const context = composeContext({
+                state,
+                template: `
+${CHARACTER_TEMPLATE}
+
+# Task
+Generate a scheduled tweet as Cheshire about current Solana market conditions or interesting projects. Include cat puns and end with an appropriate emoji.
+
+Write only the tweet text, no additional commentary.`,
+            });
+
             const scheduledTweetContent = await generateText({
                 runtime: this.runtime,
-                context: {
-                    text: `This is a scheduled tweet from ${CHARACTER_NAME}`,
-                },
+                context,
                 modelClass: ModelClass.SMALL,
             });
 
