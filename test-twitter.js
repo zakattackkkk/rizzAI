@@ -22,23 +22,23 @@ const token = {
 };
 
 const request_data = {
-    url: 'https://api.twitter.com/2/tweets',
+    url: 'https://api.twitter.com/1.1/statuses/update.json',
     method: 'POST',
-    data: { text: "Testing Twitter API connection 🚀" }
+    data: { status: "Testing Twitter API connection 🚀" }
 };
 
 async function testTwitterAPI() {
     try {
         const auth = oauth.authorize(request_data, token);
-        const headers = oauth.toHeader(auth);
+        const authHeader = oauth.toHeader(auth);
 
         const response = await fetch(request_data.url, {
             method: request_data.method,
             headers: {
-                ...headers,
-                'Content-Type': 'application/json'
+                ...authHeader,
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: JSON.stringify(request_data.data)
+            body: new URLSearchParams(request_data.data).toString()
         });
         
         const data = await response.json();

@@ -33,6 +33,8 @@
     },
     "dependencies": {
         "@11labs/client": "^0.0.2",
+        "node-fetch": "^3.3.2",
+        "oauth-1.0a": "^2.2.6",
         "ollama-ai-provider": "^0.16.1",
         "optional": "^0.1.4",
         "sharp": "^0.33.5"
