@@ -27,6 +27,7 @@ Your response should not contain any questions. Brief, concise statements only. 
 
 export class TwitterPostClient extends ClientBase {
     private approvalQueue: ApprovalQueue;
+    private approvalInterface: any; // Will be WebApprovalInterface
 
     onReady() {
         const generateNewTweetLoop = () => {
@@ -45,6 +46,17 @@ export class TwitterPostClient extends ClientBase {
             runtime,
         });
         this.approvalQueue = new ApprovalQueue(undefined, this.config.approvalTimeout);
+
+        // Initialize and start the approval interface if required
+        if (this.config.approvalRequired) {
+            import('./web/approval-interface.js').then(async ({ WebApprovalInterface }) => {
+                this.approvalInterface = await WebApprovalInterface.create(undefined, 3000);
+                await this.approvalInterface.start();
+                console.log('Twitter approval interface initialized and started');
+            }).catch(error => {
+                console.error('Error initializing approval interface:', error);
+            });
+        }
     }
 
     private async generateNewTweet() {
