@@ -19,15 +19,18 @@ export class WebApprovalInterface {
     }
 
     private setupRoutes(): void {
-        this.app.use(express.static(path.join(__dirname)));
+        // Serve static files from the web directory
+        const webDir = path.join(__dirname);
+        this.app.use(express.static(webDir));
         this.app.use(express.json());
 
+        // Main routes
         this.app.get('/', (req, res) => {
-            res.redirect('/twitter-approval');
+            res.sendFile(path.join(webDir, 'approval.html'));
         });
 
         this.app.get('/twitter-approval', (req, res) => {
-            res.sendFile(path.join(__dirname, 'approval.html'));
+            res.sendFile(path.join(webDir, 'approval.html'));
         });
 
         this.app.get('/api/twitter/pending-tweets', async (req, res) => {
