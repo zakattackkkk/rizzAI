@@ -7,6 +7,7 @@ import { IAgentRuntime, ModelClass } from "@ai16z/eliza/src/types.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 import { ClientBase } from "./base.ts";
 import { ApprovalQueue } from './approval-queue.js';
+import { WebApprovalInterface } from './web/approval-interface.js';
 
 const twitterPostTemplate = `{{timeline}}
 
@@ -27,7 +28,7 @@ Your response should not contain any questions. Brief, concise statements only. 
 
 export class TwitterPostClient extends ClientBase {
     private approvalQueue: ApprovalQueue;
-    private approvalInterface: any; // Will be WebApprovalInterface
+    private approvalInterface: WebApprovalInterface | null = null;
 
     onReady() {
         const generateNewTweetLoop = () => {
@@ -35,13 +36,12 @@ export class TwitterPostClient extends ClientBase {
             setTimeout(
                 generateNewTweetLoop,
                 (Math.floor(Math.random() * (20 - 2 + 1)) + 2) * 60 * 1000
-            ); // Random interval between 4-8 hours
+            );
         };
         generateNewTweetLoop();
     }
 
     constructor(runtime: IAgentRuntime) {
-        // Initialize the client and pass an optional callback to be called when the client is ready
         super({
             runtime,
         });
@@ -49,13 +49,17 @@ export class TwitterPostClient extends ClientBase {
 
         // Initialize and start the approval interface if required
         if (this.config.approvalRequired) {
-            import('./web/approval-interface.js').then(async ({ WebApprovalInterface }) => {
-                this.approvalInterface = await WebApprovalInterface.create(undefined, 3000);
-                await this.approvalInterface.start();
-                console.log('Twitter approval interface initialized and started');
-            }).catch(error => {
-                console.error('Error initializing approval interface:', error);
-            });
+            this.initializeApprovalInterface();
+        }
+    }
+
+    private async initializeApprovalInterface() {
+        try {
+            this.approvalInterface = new WebApprovalInterface(this.approvalQueue, 3000);
+            await this.approvalInterface.start();
+            console.log('Twitter approval interface initialized and started at http://localhost:3000/twitter-approval');
+        } catch (error) {
+            console.error('Error initializing approval interface:', error);
         }
     }
 
