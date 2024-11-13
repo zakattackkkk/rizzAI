@@ -23,6 +23,19 @@ import { glob } from "glob";
 import { elizaLogger } from "@ai16z/eliza/src/logger.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 
+export interface TwitterConfig {
+    // Base configuration
+    username?: string;
+    password?: string;
+    email?: string;
+    cookies?: any[];
+
+    // Approval configuration
+    approvalRequired?: boolean;
+    approvalMethod?: 'cli' | 'web' | 'slack';
+    approvalTimeout?: number; // in milliseconds
+}
+
 export function extractAnswer(text: string): string {
     const startIndex = text.indexOf("Answer: ") + 8;
     const endIndex = text.indexOf("<|endoftext|>", 11);
@@ -86,16 +99,17 @@ export class ClientBase extends EventEmitter {
     static _twitterClient: Scraper;
     twitterClient: Scraper;
     runtime: IAgentRuntime;
+    config: TwitterConfig;
     directions: string;
     lastCheckedTweetId: number | null = null;
     tweetCacheFilePath = __dirname + "/tweetcache/latest_checked_tweet_id.txt";
     imageDescriptionService: IImageDescriptionService;
     temperature: number = 0.5;
+    pendingTweets: Map<string, { content: string, timestamp: number }> = new Map();
 
     private tweetCache: Map<string, Tweet> = new Map();
     requestQueue: RequestQueue = new RequestQueue();
     twitterUserId: string;
-
     async cacheTweet(tweet: Tweet): Promise<void> {
         if (!tweet) {
             console.warn("Tweet is undefined, skipping cache");
@@ -158,13 +172,23 @@ export class ClientBase extends EventEmitter {
     constructor({ runtime }: { runtime: IAgentRuntime }) {
         super();
         this.runtime = runtime;
+
+        // Initialize configuration
+        this.config = {
+            username: this.runtime.getSetting("TWITTER_USERNAME"),
+            password: this.runtime.getSetting("TWITTER_PASSWORD"),
+            email: this.runtime.getSetting("TWITTER_EMAIL"),
+            approvalRequired: this.runtime.getSetting("TWITTER_APPROVAL_REQUIRED") === "true",
+            approvalMethod: (this.runtime.getSetting("TWITTER_APPROVAL_METHOD") || "cli") as 'cli' | 'web' | 'slack',
+            approvalTimeout: parseInt(this.runtime.getSetting("TWITTER_APPROVAL_TIMEOUT") || "300000"), // default 5 minutes
+        };
+
         if (ClientBase._twitterClient) {
             this.twitterClient = ClientBase._twitterClient;
         } else {
             this.twitterClient = new Scraper();
             ClientBase._twitterClient = this.twitterClient;
         }
-
         this.directions =
             "- " +
             this.runtime.character.style.all.join("\n- ") +
@@ -599,6 +623,83 @@ export class ClientBase extends EventEmitter {
                 ...state,
                 twitterClient: this.twitterClient,
             });
+        }
+    }
+
+    async queueTweetForApproval(content: string): Promise<string> {
+        const tweetId = stringToUuid(Date.now().toString());
+        this.pendingTweets.set(tweetId, {
+            content,
+            timestamp: Date.now()
+        });
+        return tweetId;
+    }
+
+    async approveTweet(tweetId: string): Promise<void> {
+        const tweet = this.pendingTweets.get(tweetId);
+        if (!tweet) {
+            throw new Error(`Tweet ${tweetId} not found in pending queue`);
+        }
+
+        // Remove from pending queue
+        this.pendingTweets.delete(tweetId);
+
+        // Post the tweet
+        try {
+            const result = await this.requestQueue.add(
+                async () => await this.twitterClient.sendTweet(tweet.content)
+            );
+            const body = await result.json();
+            const tweetResult = body.data.create_tweet.tweet_results.result;
+
+            // Process the tweet result as before
+            const postedTweet = {
+                id: tweetResult.rest_id,
+                text: tweetResult.legacy.full_text,
+                conversationId: tweetResult.legacy.conversation_id_str,
+                createdAt: tweetResult.legacy.created_at,
+                userId: tweetResult.legacy.user_id_str,
+                inReplyToStatusId: tweetResult.legacy.in_reply_to_status_id_str,
+                permanentUrl: `https://twitter.com/${this.config.username}/status/${tweetResult.rest_id}`,
+                hashtags: [],
+                mentions: [],
+                photos: [],
+                thread: [],
+                urls: [],
+                videos: [],
+            } as Tweet;
+
+            await this.cacheTweet(postedTweet);
+        } catch (error) {
+            console.error("Error posting approved tweet:", error);
+            throw error;
+        }
+    }
+
+    async rejectTweet(tweetId: string): Promise<void> {
+        if (!this.pendingTweets.has(tweetId)) {
+            throw new Error(`Tweet ${tweetId} not found in pending queue`);
+        }
+        this.pendingTweets.delete(tweetId);
+    }
+
+    async getPendingTweet(tweetId: string): Promise<{ content: string, timestamp: number } | undefined> {
+        return this.pendingTweets.get(tweetId);
+    }
+
+    async listPendingTweets(): Promise<Array<{ id: string, content: string, timestamp: number }>> {
+        return Array.from(this.pendingTweets.entries()).map(([id, tweet]) => ({
+            id,
+            ...tweet
+        }));
+    }
+
+    private async cleanupExpiredTweets(): Promise<void> {
+        const now = Date.now();
+        for (const [id, tweet] of this.pendingTweets.entries()) {
+            if (now - tweet.timestamp > this.config.approvalTimeout) {
+                this.pendingTweets.delete(id);
+            }
         }
     }
 }

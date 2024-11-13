@@ -6,15 +6,28 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@ai16z/eliza": "workspace:*",
+        "@types/express": "5.0.0",
+        "@types/sqlite3": "^3.1.11",
+        "agent-twitter-client": "0.0.13",
+        "express": "^4.21.1",
         "glob": "11.0.0",
-        "agent-twitter-client": "0.0.13"
+        "sqlite3": "^5.1.7"
     },
     "devDependencies": {
-        "tsup": "^8.3.5"
+        "@types/chai": "^5.0.1",
+        "@types/mocha": "^10.0.9",
+        "@types/node": "22.8.4",
+        "chai": "^5.1.2",
+        "mocha": "^10.8.2",
+        "ts-node": "10.9.2",
+        "tsup": "^8.3.5",
+        "typescript": "5.6.3"
     },
     "scripts": {
         "build": "tsup --format esm --dts",
-        "dev": "tsup --watch"
+        "dev": "tsup --watch",
+        "test": "mocha",
+        "test:watch": "mocha --watch"
     },
     "peerDependencies": {
         "whatwg-url": "7.1.0"

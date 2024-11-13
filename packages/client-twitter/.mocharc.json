@@ -1,0 +1,10 @@
+{
+    "extension": ["ts"],
+    "spec": "src/tests/**/*.test.ts",
+    "require": "ts-node/register",
+    "loader": "ts-node/esm",
+    "node-option": [
+        "experimental-specifier-resolution=node",
+        "loader=ts-node/esm"
+    ]
+}

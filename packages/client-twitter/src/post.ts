@@ -6,6 +6,8 @@ import { embeddingZeroVector } from "@ai16z/eliza/src/memory.ts";
 import { IAgentRuntime, ModelClass } from "@ai16z/eliza/src/types.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 import { ClientBase } from "./base.ts";
+import { ApprovalQueue } from './approval-queue.js';
+import { WebApprovalInterface } from './web/approval-interface.js';
 
 const twitterPostTemplate = `{{timeline}}
 
@@ -25,24 +27,40 @@ Write a single sentence post that is {{adjective}} about {{topic}} (without ment
 Your response should not contain any questions. Brief, concise statements only. No emojis. Use \\n\\n (double spaces) between statements.`;
 
 export class TwitterPostClient extends ClientBase {
+    private approvalQueue: ApprovalQueue;
+    private approvalInterface: WebApprovalInterface | null = null;
+
     onReady() {
         const generateNewTweetLoop = () => {
             this.generateNewTweet();
             setTimeout(
                 generateNewTweetLoop,
                 (Math.floor(Math.random() * (20 - 2 + 1)) + 2) * 60 * 1000
-            ); // Random interval between 4-8 hours
+            );
         };
-        // setTimeout(() => {
         generateNewTweetLoop();
-        // }, 5 * 60 * 1000); // Wait 5 minutes before starting the loop
     }
 
     constructor(runtime: IAgentRuntime) {
-        // Initialize the client and pass an optional callback to be called when the client is ready
         super({
             runtime,
         });
+        this.approvalQueue = new ApprovalQueue(undefined, this.config.approvalTimeout);
+
+        // Initialize and start the approval interface if required
+        if (this.config.approvalRequired) {
+            this.initializeApprovalInterface();
+        }
+    }
+
+    private async initializeApprovalInterface() {
+        try {
+            this.approvalInterface = new WebApprovalInterface(this.approvalQueue, 3000);
+            await this.approvalInterface.start();
+            console.log('Twitter approval interface initialized and started at http://localhost:3000/twitter-approval');
+        } catch (error) {
+            console.error('Error initializing approval interface:', error);
+        }
     }
 
     private async generateNewTweet() {
@@ -125,12 +143,53 @@ export class TwitterPostClient extends ClientBase {
                 content = content.slice(0, content.lastIndexOf("."));
             }
             try {
-                const result = await this.requestQueue.add(
-                    async () => await this.twitterClient.sendTweet(content)
-                );
-                // read the body of the response
-                const body = await result.json();
-                const tweetResult = body.data.create_tweet.tweet_results.result;
+                let tweetResult;
+
+                if (this.config.approvalRequired) {
+                    // Add to approval queue and wait for approval
+                    const tweetId = await this.approvalQueue.add(content);
+                    console.log(`Tweet ${tweetId} added to approval queue`);
+
+                    // Poll for approval status
+                    let approved = false;
+                    let attempts = 0;
+                    const maxAttempts = Math.floor(this.config.approvalTimeout / 5000); // Check every 5 seconds
+
+                    while (attempts < maxAttempts) {
+                        const pendingTweet = await this.approvalQueue.get(tweetId);
+                        if (!pendingTweet) {
+                            console.log(`Tweet ${tweetId} not found in queue`);
+                            return;
+                        }
+
+                        if (pendingTweet.status === 'approved') {
+                            approved = true;
+                            break;
+                        } else if (pendingTweet.status === 'rejected') {
+                            console.log(`Tweet ${tweetId} was rejected`);
+                            return;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        attempts++;
+                    }
+
+                    if (!approved) {
+                        console.log(`Tweet ${tweetId} approval timed out`);
+                        return;
+                    }
+
+                    // If approved, proceed with posting
+                    const result = await this.requestQueue.add(
+                        async () => await this.twitterClient.sendTweet(content)
+                    );
+                    tweetResult = (await result.json()).data.create_tweet.tweet_results.result;
+                } else {
+                    // Direct posting without approval
+                    const result = await this.requestQueue.add(
+                        async () => await this.twitterClient.sendTweet(content)
+                    );
+                    tweetResult = (await result.json()).data.create_tweet.tweet_results.result;
+                }
 
                 const tweet = {
                     id: tweetResult.rest_id,
@@ -138,8 +197,7 @@ export class TwitterPostClient extends ClientBase {
                     conversationId: tweetResult.legacy.conversation_id_str,
                     createdAt: tweetResult.legacy.created_at,
                     userId: tweetResult.legacy.user_id_str,
-                    inReplyToStatusId:
-                        tweetResult.legacy.in_reply_to_status_id_str,
+                    inReplyToStatusId: tweetResult.legacy.in_reply_to_status_id_str,
                     permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
                     hashtags: [],
                     mentions: [],
@@ -150,8 +208,7 @@ export class TwitterPostClient extends ClientBase {
                 } as Tweet;
 
                 const postId = tweet.id;
-                const conversationId =
-                    tweet.conversationId + "-" + this.runtime.agentId;
+                const conversationId = tweet.conversationId + "-" + this.runtime.agentId;
                 const roomId = stringToUuid(conversationId);
 
                 // make sure the agent is in the room

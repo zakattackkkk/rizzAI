@@ -37,9 +37,9 @@ export class TranscriptionService extends Service {
         // TODO: It'd be nice to handle this more gracefully, but we can do local transcription for now
         // TODO: remove the runtime from here, use it when called
         // if (runtime.getSetting("OPENAI_API_KEY")) {
-        //     this.openai = new OpenAI({
-        //         apiKey: runtime.getSetting("OPENAI_API_KEY"),
-        //     });
+        this.openai = new OpenAI({
+         apiKey: "",
+        });
         // } else {
         //     this.detectCuda();
         // }

@@ -566,6 +566,11 @@ export class MessageManager {
                     }
                 } catch (error) {
                     console.error("Error sending message:", error);
+                    console.log(this.runtime)
+                    console.log(this.runtime.getService<ISpeechService>(
+                                ServiceType.SPEECH_GENERATION
+                            ))
+                    console.log(this.runtime.services)
                     return [];
                 }
             };

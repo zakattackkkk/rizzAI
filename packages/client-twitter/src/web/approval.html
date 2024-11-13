@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Approval Interface</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f8fa;
+        }
+        .tweet-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .tweet-content {
+            font-size: 16px;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+        .tweet-meta {
+            color: #657786;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .approve {
+            background: #1da1f2;
+            color: white;
+        }
+        .approve:hover {
+            background: #1a91da;
+        }
+        .reject {
+            background: #e0245e;
+            color: white;
+        }
+        .reject:hover {
+            background: #c51e4a;
+        }
+        .timer {
+            float: right;
+            color: #657786;
+        }
+        .expired {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        #no-tweets {
+            text-align: center;
+            color: #657786;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Twitter Approval Interface</h1>
+    <div id="pending-tweets">
+        <!-- Tweets will be dynamically inserted here -->
+    </div>
+    <div id="no-tweets" style="display: none;">
+        <p>No pending tweets to review.</p>
+    </div>
+
+    <template id="tweet-template">
+        <div class="tweet-card" data-tweet-id="">
+            <div class="tweet-content"></div>
+            <div class="tweet-meta">
+                Created: <span class="created-at"></span>
+                <span class="timer"></span>
+            </div>
+            <div class="button-group">
+                <button class="approve" onclick="approveTweet(this)">Approve</button>
+                <button class="reject" onclick="rejectTweet(this)">Reject</button>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // Will be implemented in approval-interface.ts
+        let pendingTweets = [];
+
+        async function fetchPendingTweets() {
+            try {
+                const response = await fetch('/api/twitter/pending-tweets');
+                const tweets = await response.json();
+                updateTweetDisplay(tweets);
+            } catch (error) {
+                console.error('Error fetching tweets:', error);
+            }
+        }
+
+        function updateTweetDisplay(tweets) {
+            const container = document.getElementById('pending-tweets');
+            const template = document.getElementById('tweet-template');
+            const noTweets = document.getElementById('no-tweets');
+
+            container.innerHTML = '';
+
+            if (tweets.length === 0) {
+                noTweets.style.display = 'block';
+                return;
+            }
+
+            noTweets.style.display = 'none';
+            tweets.forEach(tweet => {
+                const card = template.content.cloneNode(true);
+                const tweetCard = card.querySelector('.tweet-card');
+
+                tweetCard.dataset.tweetId = tweet.id;
+                tweetCard.querySelector('.tweet-content').textContent = tweet.content;
+                tweetCard.querySelector('.created-at').textContent = new Date(tweet.createdAt).toLocaleString();
+
+                container.appendChild(card);
+            });
+        }
+
+        async function approveTweet(button) {
+            const tweetId = button.closest('.tweet-card').dataset.tweetId;
+            try {
+                await fetch(`/api/twitter/approve/${tweetId}`, { method: 'POST' });
+                fetchPendingTweets();
+            } catch (error) {
+                console.error('Error approving tweet:', error);
+            }
+        }
+
+        async function rejectTweet(button) {
+            const tweetId = button.closest('.tweet-card').dataset.tweetId;
+            try {
+                await fetch(`/api/twitter/reject/${tweetId}`, { method: 'POST' });
+                fetchPendingTweets();
+            } catch (error) {
+                console.error('Error rejecting tweet:', error);
+            }
+        }
+
+        // Initial load and periodic refresh
+        fetchPendingTweets();
+        setInterval(fetchPendingTweets, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>
