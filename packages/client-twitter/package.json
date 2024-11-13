@@ -14,7 +14,11 @@
         "sqlite3": "^5.1.7"
     },
     "devDependencies": {
+        "@types/chai": "^5.0.1",
+        "@types/mocha": "^10.0.9",
         "@types/node": "22.8.4",
+        "chai": "^5.1.2",
+        "mocha": "^10.8.2",
         "ts-node": "10.9.2",
         "tsup": "^8.3.5",
         "typescript": "5.6.3"
@@ -22,7 +26,8 @@
     "scripts": {
         "build": "tsup --format esm --dts",
         "dev": "tsup --watch",
-        "test": "NODE_OPTIONS='--experimental-modules --experimental-specifier-resolution=node' ts-node --esm src/test-approval-system.ts"
+        "test": "mocha",
+        "test:watch": "mocha --watch"
     },
     "peerDependencies": {
         "whatwg-url": "7.1.0"
