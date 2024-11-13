@@ -3,11 +3,13 @@
     "compilerOptions": {
         "types": ["node", "mocha", "chai"],
         "module": "ESNext",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "resolveJsonModule": true,
+        "target": "ESNext",
         "lib": ["ES2022", "DOM"],
         "esModuleInterop": true,
-        "allowJs": true,
-        "resolveJsonModule": true
+        "allowJs": true
     },
     "include": [
         "src/**/*.ts",

@@ -1,8 +1,9 @@
-import { Database } from "sqlite3";
+import sqlite3 from "sqlite3";
 import { promisify } from "util";
 import path from "path";
 import { fileURLToPath } from "url";
 
+const { Database } = sqlite3;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -16,7 +17,7 @@ export interface PendingTweet {
 }
 
 export class ApprovalQueue {
-    private db: Database;
+    private db: sqlite3.Database;
     private dbPath: string;
     private defaultTimeout: number;
     private webhookUrl?: string;
