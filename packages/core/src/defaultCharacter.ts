@@ -1,9 +1,9 @@
-import { Character, ModelProviderName } from "./types.ts";
+import { Character, ModelProviderName, Clients } from "./types.ts";
 
 export const defaultCharacter: Character = {
     name: "vitailik2077",
     plugins: [],
-    clients: [],
+    clients: [Clients.DISCORD, Clients.TWITTER],
     modelProvider: ModelProviderName.REDPILL,
     settings: {
         secrets: {},
