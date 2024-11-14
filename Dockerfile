@@ -1,8 +1,9 @@
 # Use Node 23 instead of 20
-FROM --platform=linux/amd64 node:23.1.0
+FROM node:23.1.0
+
 
 # Install node-gyp and node-waf
-RUN npm install -g node-gyp node-waf
+RUN npm install -g node-gyp node-waf pnpm
 
 # Install system dependencies and Playwright dependencies in one layer
 RUN apt-get update && apt-get install -y \
@@ -31,27 +32,21 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
-RUN corepack enable pnpm
+#RUN corepack enable pnpm
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files first
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/core/package.json ./packages/core/
-COPY packages/agent/package.json ./packages/agent/
+COPY . .
 
 # Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --include=optional sharp --frozen-lockfile
+#RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --include=optional sharp
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install -w
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --include=optional sharp -w
 
 # Clean node_modules before copying source
 RUN rm -rf packages/*/node_modules
-
-# Copy source files
-COPY . .
-
-# Reinstall and build
-RUN pnpm install --include=optional sharp
 
 # Build all packages
 RUN pnpm build
@@ -65,4 +60,4 @@ ENV PORT=3000
 USER node
 
 # Start the application
-RUN pnpm start
+CMD ["pnpm", "start"]
