@@ -3,7 +3,6 @@ sidebar_position: 1
 title: Stream Notes
 ---
 
-<<<<<<< HEAD
 # Stream Notes Overview
 
 Welcome to our collection of stream notes! This section contains detailed summaries and recordings of our community streams, Twitter spaces, and development sessions. These notes capture key insights, technical discussions, and community interactions that help shape the Eliza framework and our ecosystem.
@@ -88,9 +87,9 @@ Have notes from a stream that isn't documented here? We welcome community contri
 
 - Join our [Discord](https://discord.gg/ai16z) to participate in future streams
 - Follow us on [Twitter](https://twitter.com/ai16zdao) for stream announcements
-=======
-# Stream Notes
 
+
+# Detailed Stream Notes
 ## Memes, AI Agents, DAOs 11-8-24
 
 Space: https://x.com/ai16zdao/status/1854969196142379403
@@ -718,4 +717,3 @@ The space emphasized technical implementation details while addressing community
 9. In the near future, AI Marc will be able to execute trades autonomously based on the information and recommendations gathered from the community. Human intervention will be minimized.
 10. They are working on getting AI Marc on-chain as soon as possible using trusted execution environments for him to take actions like approving trades.
 11. The plan is for AI Marc to eventually participate in a "futarchy" style governance market within the DAO, allowing humans to influence decisions but not fully control the AI.
->>>>>>> 0e7722d643664681c2403f9e6d88f7b212105505
