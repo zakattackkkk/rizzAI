@@ -1,6 +1,5 @@
-# Use Node 23 instead of 20
-FROM node:23.1.0
-
+# Use Node 22 instead of 20
+FROM node:22.11.0
 
 # Install node-gyp and node-waf
 RUN npm install -g node-gyp node-waf pnpm
@@ -45,11 +44,9 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install -w
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --include=optional sharp -w
 
-# Clean node_modules before copying source
-RUN rm -rf packages/*/node_modules
-
 # Build all packages
 RUN pnpm build
+COPY . .
 
 # Expose ports
 EXPOSE 3000
