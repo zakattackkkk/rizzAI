@@ -4,26 +4,30 @@
 
 ## Type declaration
 
-### actions
+### actions?
 
-> **actions**: [`Action`](../interfaces/Action.md)[]
+> `optional` **actions**: [`Action`](../interfaces/Action.md)[]
 
 ### description
 
 > **description**: `string`
 
-### evaluators
+### evaluators?
 
-> **evaluators**: [`Evaluator`](../interfaces/Evaluator.md)[]
+> `optional` **evaluators**: [`Evaluator`](../interfaces/Evaluator.md)[]
 
 ### name
 
 > **name**: `string`
 
-### providers
+### providers?
 
-> **providers**: [`Provider`](../interfaces/Provider.md)[]
+> `optional` **providers**: [`Provider`](../interfaces/Provider.md)[]
+
+### services?
+
+> `optional` **services**: [`Service`](../classes/Service.md)[]
 
 ## Defined in
 
-[core/src/core/types.ts:290](https://github.com/ai16z/eliza/blob/c96957e5a5d17e343b499dd4d46ce403856ac5bc/core/src/core/types.ts#L290)
+[packages/core/src/types.ts:311](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L311)

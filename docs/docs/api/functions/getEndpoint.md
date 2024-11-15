@@ -1,15 +1,15 @@
 # Function: getEndpoint()
 
-> **getEndpoint**(`provider`): `any`
+> **getEndpoint**(`provider`): `string`
 
 ## Parameters
 
-• **provider**: [`ModelProvider`](../enumerations/ModelProvider.md)
+• **provider**: [`ModelProviderName`](../enumerations/ModelProviderName.md)
 
 ## Returns
 
-`any`
+`string`
 
 ## Defined in
 
-[core/src/core/models.ts:178](https://github.com/ai16z/eliza/blob/c96957e5a5d17e343b499dd4d46ce403856ac5bc/core/src/core/models.ts#L178)
+[packages/core/src/models.ts:226](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/models.ts#L226)

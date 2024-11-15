@@ -10,9 +10,9 @@ Represents an example of a message, typically used for demonstrating or testing 
 
 #### Defined in
 
-[core/src/core/types.ts:167](https://github.com/ai16z/eliza/blob/c96957e5a5d17e343b499dd4d46ce403856ac5bc/core/src/core/types.ts#L167)
+[packages/core/src/types.ts:182](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L182)
 
----
+***
 
 ### user
 
@@ -20,4 +20,4 @@ Represents an example of a message, typically used for demonstrating or testing 
 
 #### Defined in
 
-[core/src/core/types.ts:166](https://github.com/ai16z/eliza/blob/c96957e5a5d17e343b499dd4d46ce403856ac5bc/core/src/core/types.ts#L166)
+[packages/core/src/types.ts:181](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L181)

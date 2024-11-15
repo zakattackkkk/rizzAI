@@ -1,51 +1,48 @@
-import crypto from 'crypto';
-import OAuth from 'oauth-1.0a';
 import fetch from 'node-fetch';
 
-const oauth = new OAuth({
-    consumer: {
-        key: 'T6FH1zQwriwSEhMt8wRlJqtsD',
-        secret: 'lY1T4CdnXdff9X0JAtVaC4PEFuYRR6Tdm3tPPYSI0JfV4HC2pf'
-    },
-    signature_method: 'HMAC-SHA1',
-    hash_function(base_string, key) {
-        return crypto
-            .createHmac('sha1', key)
-            .update(base_string)
-            .digest('base64');
-    }
-});
+const BEARER_TOKEN = 'AAAAAAAAAAAAAAAAAAAAAHiFwQEAAAAAHAuEHfVzgFY%2FO3DojXGQiF9NNc4%3D1sREkMMottR1f4i7D8AXp2vmAUCs5AvyWXuB0uSxaGjdUQ2aNH';
 
-const token = {
-    key: '1723999359635709952-Hpwvk1kB4CiyVbxxhkVWKPPRWbaQU5',
-    secret: 'sblHdDdZfklYyHjGRw53B6-o84naoXB_1Pd0TTIofCxUcj7XS9'
-};
+const messages = [
+    "✓ Registering action: IGNORE",
+    "✓ Registering action: NONE",
+    "✓ Registering action: MUTE_ROOM",
+    "✓ Registering action: UNMUTE_ROOM",
+    "Registering service: browser\nRegistering service: image_description\nRegistering service: text_generation\nRegistering service: pdf\nRegistering service: speech_generation\nRegistering service: transcription\nRegistering service: video\nChat started. Type 'exit' to quit.\nServer running at http://localhost:3000/"
+];
 
-const request_data = {
-    url: 'https://api.twitter.com/1.1/statuses/update.json',
-    method: 'POST',
-    data: { status: "Testing Twitter API connection 🚀" }
-};
-
-async function testTwitterAPI() {
+async function postTweet(text) {
+    const url = 'https://api.twitter.com/2/tweets';
+    
     try {
-        const auth = oauth.authorize(request_data, token);
-        const authHeader = oauth.toHeader(auth);
-
-        const response = await fetch(request_data.url, {
-            method: request_data.method,
+        const response = await fetch(url, {
+            method: 'POST',
             headers: {
-                ...authHeader,
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Authorization': `Bearer ${BEARER_TOKEN}`,
+                'Content-Type': 'application/json',
             },
-            body: new URLSearchParams(request_data.data).toString()
+            body: JSON.stringify({ text })
         });
         
         const data = await response.json();
+        console.log('Tweet posted:', text);
         console.log('Twitter API Response:', data);
+        return data;
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error posting tweet:', error);
+        throw error;
     }
 }
 
-testTwitterAPI();
+async function postAllTweets() {
+    for (const message of messages) {
+        try {
+            await postTweet(message);
+            // Wait 2 seconds between tweets to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+            console.error('Failed to post tweet:', message);
+        }
+    }
+}
+
+postAllTweets();

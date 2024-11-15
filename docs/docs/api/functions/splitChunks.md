@@ -1,12 +1,10 @@
 # Function: splitChunks()
 
-> **splitChunks**(`runtime`, `content`, `chunkSize`, `bleed`, `modelClass`): `Promise`\<`string`[]\>
+> **splitChunks**(`content`, `chunkSize`, `bleed`): `Promise`\<`string`[]\>
 
 Splits content into chunks of specified size with optional overlapping bleed sections
 
 ## Parameters
-
-• **runtime**: `any`
 
 • **content**: `string`
 
@@ -20,8 +18,6 @@ The maximum size of each chunk in tokens
 
 Number of characters to overlap between chunks (default: 100)
 
-• **modelClass**: `string`
-
 ## Returns
 
 `Promise`\<`string`[]\>
@@ -30,4 +26,4 @@ Promise resolving to array of text chunks with bleed sections
 
 ## Defined in
 
-[core/src/core/generation.ts:302](https://github.com/ai16z/eliza/blob/c96957e5a5d17e343b499dd4d46ce403856ac5bc/core/src/core/generation.ts#L302)
+[packages/core/src/generation.ts:391](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/generation.ts#L391)
