@@ -3,21 +3,18 @@ import fs from "fs";
 import { composeContext } from "@ai16z/eliza/src/context.ts";
 import { generateText } from "@ai16z/eliza/src/generation.ts";
 import { embeddingZeroVector } from "@ai16z/eliza/src/memory.ts";
-import { IAgentRuntime, ModelClass } from "@ai16z/eliza";
+import { IAgentRuntime, ModelClass } from "@ai16z/eliza/src/types.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 import { ClientBase } from "./base.ts";
 
 const twitterPostTemplate = `{{timeline}}
 
-# Knowledge
-{{knowledge}}
+{{providers}}
 
 About {{agentName}} (@{{twitterUserName}}):
 {{bio}}
 {{lore}}
 {{postDirections}}
-
-{{providers}}
 
 {{recentPosts}}
 
@@ -31,14 +28,10 @@ export class TwitterPostClient extends ClientBase {
     onReady() {
         const generateNewTweetLoop = () => {
             this.generateNewTweet();
-            setTimeout(
-                generateNewTweetLoop,
-                (Math.floor(Math.random() * (4 - 1 + 1)) + 1) * 60 * 60 * 1000
-            ); // Random interval between 1 and 4 hours
+            const interval = (Math.floor(Math.random() * (3 - 1 + 1)) + 1) * 60 * 60 * 1000 // Random interval between 1-3 hours
+            setTimeout(generateNewTweetLoop, interval);
         };
-        // setTimeout(() => {
         generateNewTweetLoop();
-        // }, 5 * 60 * 1000); // Wait 5 minutes before starting the loop
     }
 
     constructor(runtime: IAgentRuntime) {
