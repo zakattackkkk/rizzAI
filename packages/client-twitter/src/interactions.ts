@@ -16,7 +16,7 @@ import {
     Memory,
     ModelClass,
     State,
-} from "@ai16z/eliza";
+} from "@ai16z/eliza/src/types.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 import { ClientBase } from "./base.ts";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
@@ -24,16 +24,13 @@ import { buildConversationThread, sendTweet, wait } from "./utils.ts";
 export const twitterMessageHandlerTemplate =
     `{{timeline}}
 
-# Knowledge
-{{knowledge}}
+{{providers}}
 
 # Task: Generate a post for the character {{agentName}}.
 About {{agentName}} (@{{twitterUserName}}):
 {{bio}}
 {{lore}}
 {{topics}}
-
-{{providers}}
 
 {{characterPostExamples}}
 
@@ -43,6 +40,8 @@ Recent interactions between {{agentName}} and other users:
 {{recentPostInteractions}}
 
 {{recentPosts}}
+
+Note: If an image is provided, use it as inspiration or directly incorporate its elements into the post.
 
 # Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
 {{currentPost}}
@@ -78,8 +77,9 @@ export class TwitterInteractionClient extends ClientBase {
             this.handleTwitterInteractions();
             setTimeout(
                 handleTwitterInteractionsLoop,
-                (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
-            ); // Random interval between 2-5 minutes
+                (Math.random() * (30 - 10) + 10) * 60 * 1000 
+                // Random interval between 10 and 30 minutes.
+            );
         };
         handleTwitterInteractionsLoop();
     }
@@ -118,7 +118,7 @@ export class TwitterInteractionClient extends ClientBase {
                 ) {
                     const conversationId =
                         tweet.conversationId + "-" + this.runtime.agentId;
-
+                    
                     const roomId = stringToUuid(conversationId);
 
                     const userIdUUID = stringToUuid(tweet.userId as string);
@@ -130,7 +130,11 @@ export class TwitterInteractionClient extends ClientBase {
                         tweet.name,
                         "twitter"
                     );
-
+                    let image: Buffer;
+                    if (tweet.mentions.length > 1) {
+                        const thread_url =`https://x.com/${tweet.mentions[0].username}/status/${tweet.conversationId}`
+                        image = await this.takeScreenshotOfTweet(thread_url)
+                    }
                     await buildConversationThread(tweet, this);
 
                     const message = {
@@ -143,6 +147,7 @@ export class TwitterInteractionClient extends ClientBase {
                     await this.handleTweet({
                         tweet,
                         message,
+                        mediaBuffer: image
                     });
 
                     // Update the last checked tweet ID after processing each tweet
@@ -150,6 +155,7 @@ export class TwitterInteractionClient extends ClientBase {
 
                     try {
                         if (this.lastCheckedTweetId) {
+
                             fs.writeFileSync(
                                 this.tweetCacheFilePath,
                                 this.lastCheckedTweetId.toString(),
@@ -190,9 +196,11 @@ export class TwitterInteractionClient extends ClientBase {
     private async handleTweet({
         tweet,
         message,
+        mediaBuffer
     }: {
         tweet: Tweet;
         message: Memory;
+        mediaBuffer ?: Buffer
     }) {
         if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
             console.log("skipping tweet from bot itself", tweet.id);
@@ -259,10 +267,10 @@ export class TwitterInteractionClient extends ClientBase {
                     url: tweet.permanentUrl,
                     inReplyTo: tweet.inReplyToStatusId
                         ? stringToUuid(
-                              tweet.inReplyToStatusId +
-                                  "-" +
-                                  this.runtime.agentId
-                          )
+                            tweet.inReplyToStatusId +
+                            "-" +
+                            this.runtime.agentId
+                        )
                         : undefined,
                 },
                 userId: userIdUUID,
@@ -306,7 +314,8 @@ export class TwitterInteractionClient extends ClientBase {
         const response = await generateMessageResponse({
             runtime: this.runtime,
             context,
-            modelClass: ModelClass.SMALL,
+            modelClass: ModelClass.LARGE,
+            image: mediaBuffer,
         });
 
         const stringId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
@@ -321,7 +330,8 @@ export class TwitterInteractionClient extends ClientBase {
                         response,
                         message.roomId,
                         this.runtime.getSetting("TWITTER_USERNAME"),
-                        tweet.id
+                        tweet.id,
+                        mediaBuffer
                     );
                     return memories;
                 };
@@ -352,10 +362,24 @@ export class TwitterInteractionClient extends ClientBase {
                 }
                 const debugFileName = `tweets/tweet_generation_${tweet.id}.txt`;
                 fs.writeFileSync(debugFileName, responseInfo);
+                //await wait(5 * 60 * 1000, 30 * 10 * 1000);
                 await wait();
             } catch (error) {
                 console.error(`Error sending response tweet: ${error}`);
             }
         }
+    }
+
+    async takeScreenshotOfTweet(tweetUrl: string): Promise<Buffer | null> {
+        const response = await fetch("https://tweet2img.netlify.app/img?url=" + tweetUrl.replace("x.com", "twitter.com"), {
+            method: "GET",
+        });
+        if (!response.ok) {
+            console.error("Failed to post tweet URL:", response.statusText);
+            return null;
+        }
+        const imageBlob = await response.blob();
+        const arrayBuffer = await imageBlob.arrayBuffer();        
+        return Buffer.from(arrayBuffer);
     }
 }
