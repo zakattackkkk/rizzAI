@@ -1,6 +1,7 @@
-# Eliza
+# BrahVerse
+BrahVerse is the AI version of InverseBrah. He takes a screenshot of any post you tag him in and shares what he thinks.
 
-<img src="./docs/static/img/eliza_banner.jpg" alt="Eliza Banner" width="100%" />
+![banner](https://github.com/user-attachments/assets/430083aa-de0d-4d7c-a4d1-20a3a7e96445)
 
 ### [For Chinese Version: 中文说明](./README_CN.md)
 
