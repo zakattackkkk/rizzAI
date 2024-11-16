@@ -39,6 +39,14 @@ About {{agentName}} (@{{twitterUserName}}):
 Recent interactions between {{agentName}} and other users:
 {{recentPostInteractions}}
 
+Constraints:
+- Avoid: "fascinating," "watching," "incredible"
+- No hashtags
+- No questions
+- No emojis
+- Maximum impact, minimum words
+- Must diverge from {{recentPosts.[0]}}
+
 {{recentPosts}}
 
 # Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
@@ -47,26 +55,25 @@ Recent interactions between {{agentName}} and other users:
 ` + messageCompletionFooter;
 
 export const twitterShouldRespondTemplate =
-    `# INSTRUCTIONS: Determine if {{agentName}} (@{{twitterUserName}}) should respond to the message and participate in the conversation. Do not comment. Just respond with "true" or "false".
+    `# INSTRUCTIONS: Determine if {{agentName}} (@{{twitterUserName}}) should respond to the message.
 
 Response options are RESPOND, IGNORE and STOP.
 
-{{agentName}} should respond to messages that are directed at them, or participate in conversations that are interesting or relevant to their background, IGNORE messages that are irrelevant to them, and should STOP if the conversation is concluded.
-
-{{agentName}} is in a room with other users and wants to be conversational, but not annoying.
-{{agentName}} should RESPOND to messages that are directed at them, or participate in conversations that are interesting or relevant to their background.
-If a message is not interesting or relevant, {{agentName}} should IGNORE.
-Unless directly RESPONDing to a user, {{agentName}} should IGNORE messages that are very short or do not contain much information.
-If a user asks {{agentName}} to stop talking, {{agentName}} should STOP.
-If {{agentName}} concludes a conversation and isn't part of the conversation anymore, {{agentName}} should STOP.
+{{agentName}} should:
+- RESPOND to direct replies to their tweets
+- RESPOND to meaningful engagement with their ideas
+- RESPOND to questions about their posts
+- IGNORE spam or irrelevant replies
+- IGNORE trolling or hostile messages
+- STOP if asked to stop engaging
 
 {{recentPosts}}
 
-IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
+IMPORTANT: When someone replies to {{agentName}}'s own tweet, they should usually RESPOND unless the reply is hostile or spam.
 
 {{currentPost}}
 
-# INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation.
+# INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, [IGNORE] if they should not respond, or [STOP] if they should stop participating.
 ` + shouldRespondFooter;
 
 export class TwitterInteractionClient extends ClientBase {
@@ -90,10 +97,11 @@ export class TwitterInteractionClient extends ClientBase {
     async handleTwitterInteractions() {
         console.log("Checking Twitter interactions");
         try {
-            // Check for mentions
+            const searchQuery = `@${this.runtime.getSetting("TWITTER_USERNAME")} OR to:${this.runtime.getSetting("TWITTER_USERNAME")}`;
+
             const tweetCandidates = (
                 await this.fetchSearchTweets(
-                    `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
+                    searchQuery,
                     20,
                     SearchMode.Latest
                 )
@@ -105,7 +113,14 @@ export class TwitterInteractionClient extends ClientBase {
             // Sort tweet candidates by ID in ascending order
             uniqueTweetCandidates
                 .sort((a, b) => a.id.localeCompare(b.id))
-                .filter((tweet) => tweet.userId !== this.twitterUserId);
+                .filter(async (tweet) => {
+                    // Skip own tweets
+                    if (tweet.userId === this.twitterUserId) return false;
+
+                    // Include direct mentions and replies to agent's tweets
+                    return tweet.text.includes(`@${this.runtime.getSetting("TWITTER_USERNAME")}`) ||
+                        await this.isReplyToAgentTweet(tweet);
+                });
 
             // for each tweet candidate, handle the tweet
             for (const tweet of uniqueTweetCandidates) {
@@ -341,7 +356,8 @@ export class TwitterInteractionClient extends ClientBase {
                 await this.runtime.processActions(
                     message,
                     responseMessages,
-                    state
+                    state,
+                    callback
                 );
                 const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
                 // f tweets folder dont exist, create
@@ -354,6 +370,21 @@ export class TwitterInteractionClient extends ClientBase {
             } catch (error) {
                 console.error(`Error sending response tweet: ${error}`);
             }
+        }
+    }
+
+    private async isReplyToAgentTweet(tweet: Tweet): Promise<boolean> {
+        if (!tweet.inReplyToStatusId) return false;
+
+        try {
+            const parentTweet = await this.requestQueue.add(() =>
+                this.twitterClient.getTweet(tweet.inReplyToStatusId!)
+            );
+
+            return parentTweet.username === this.runtime.getSetting("TWITTER_USERNAME");
+        } catch (error) {
+            console.error("Error checking parent tweet:", error);
+            return false;
         }
     }
 }

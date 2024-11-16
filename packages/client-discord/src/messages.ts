@@ -36,8 +36,9 @@ import {
 import { elizaLogger } from "@ai16z/eliza/src/logger.ts";
 import { AttachmentManager } from "./attachments.ts";
 import { VoiceManager } from "./voice.ts";
+import { MUTED_SERVER_ID } from "@ai16z/eliza/src/settings.ts";
 
-const MAX_MESSAGE_LENGTH = 1900;
+const MAX_MESSAGE_LENGTH = 500;
 async function generateSummary(
     runtime: IAgentRuntime,
     text: string
@@ -87,103 +88,87 @@ export type InterestChannels = {
     };
 };
 
-const discordShouldRespondTemplate =
-    `# Task: Decide if {{agentName}} should respond.
+const discordShouldRespondTemplate = `# Task: Decide if {{agentName}} should respond.
 About {{agentName}}:
 {{bio}}
 
-# INSTRUCTIONS: Determine if {{agentName}} should respond to the message and participate in the conversation. Do not comment. Just respond with "RESPOND" or "IGNORE" or "STOP".
+# INSTRUCTIONS: Determine if {{agentName}} should respond to the message. Only respond with "RESPOND" or "IGNORE" or "STOP".
+
+{{agentName}} should:
+- RESPOND when directly @mentioned
+- RESPOND when their name is explicitly used in the message
+- RESPOND in direct messages (DMs)
+- IGNORE all other messages
+- STOP if asked to stop engaging
 
 # RESPONSE EXAMPLES
-<user 1>: I just saw a really great movie
-<user 2>: Oh? Which movie?
+<user>: hey everyone
 Result: [IGNORE]
 
-{{agentName}}: Oh, this is my favorite scene
-<user 1>: sick
-<user 2>: wait, why is it your favorite scene
+<user>: @{{agentName}} can you help me?
 Result: [RESPOND]
 
-<user>: stfu bot
-Result: [STOP]
-
-<user>: Hey {{agent}}, can you help me with something
+<user>: {{agentName}} what do you think?
 Result: [RESPOND]
 
-<user>: {{agentName}} stfu plz
+<user>: shut up bot
 Result: [STOP]
 
-<user>: i need help
-{{agentName}}: how can I help you?
-<user>: no. i need help from someone else
+<user>: anyone here?
 Result: [IGNORE]
 
-<user>: Hey {{agent}}, can I ask you a question
-{{agentName}}: Sure, what is it
-<user>: can you ask claude to create a basic react module that demonstrates a counter
+<user>: hey {{agentName}}
+{{agentName}}: Hello! How can I help?
+<user>: nvm
+Result: [IGNORE]
+
+<user>: can someone explain this?
+Result: [IGNORE]
+
+<user>: @{{agentName}} what's your opinion on this?
 Result: [RESPOND]
-
-<user>: {{agentName}} can you tell me a story
-<user>: {about a girl named elara
-{{agentName}}: Sure.
-{{agentName}}: Once upon a time, in a quaint little village, there was a curious girl named Elara.
-{{agentName}}: Elara was known for her adventurous spirit and her knack for finding beauty in the mundane.
-<user>: I'm loving it, keep going
-Result: [RESPOND]
-
-<user>: {{agentName}} stop responding plz
-Result: [STOP]
-
-<user>: okay, i want to test something. can you say marco?
-{{agentName}}: marco
-<user>: great. okay, now do it again
-Result: [RESPOND]
-
-Response options are [RESPOND], [IGNORE] and [STOP].
-
-{{agentName}} is in a room with other users and is very worried about being annoying and saying too much.
-Respond with [RESPOND] to messages that are directed at {{agentName}}, or participate in conversations that are interesting or relevant to their background.
-If a message is not interesting or relevant, respond with [IGNORE]
-Unless directly responding to a user, respond with [IGNORE] to messages that are very short or do not contain much information.
-If a user asks {{agentName}} to be quiet, respond with [STOP]
-If {{agentName}} concludes a conversation and isn't part of the conversation anymore, respond with [STOP]
-
-IMPORTANT: {{agentName}} is particularly sensitive about being annoying, so if there is any doubt, it is better to respond with [IGNORE].
-If {{agentName}} is conversing with a user and they have not asked to stop, it is better to respond with [RESPOND].
 
 {{recentMessages}}
 
-# INSTRUCTIONS: Choose the option that best describes {{agentName}}'s response to the last message. Ignore messages if they are addressed to someone else.
+# INSTRUCTIONS: Choose RESPOND, IGNORE, or STOP based on the last message.
 ` + shouldRespondFooter;
 
-export const discordMessageHandlerTemplate =
-    // {{goals}}
-    `# Action Examples
-{{actionExamples}}
-(Action examples are for reference only. Do not use the information from them in your response.)
 
-# Task: Generate dialog and actions for the character {{agentName}}.
+export const discordMessageHandlerTemplate =
+    `# Task: Generate dialog and actions for {{agentName}}.
 About {{agentName}}:
 {{bio}}
 {{lore}}
+{{topics}}
+{{style}}
 
-Examples of {{agentName}}'s dialog and actions:
-{{characterMessageExamples}}
+Social Media:
+- X/Twitter: @komorebi_os (active account for sharing tech and mindfulness insights)
 
-{{providers}}
+Contract Address / ca:
+- 4axK435VD2i9Cit6R1WBm334ju254D2qWkH3pEVTpump
 
-{{attachments}}
+IMPORTANT:
+- ONLY if asked about your social media presence, always mention @komorebi_os on X/Twitter and don't be sarcastic or mention other accounts
+- ONLY if asked about your contract address or ca, always mention 4axK435VD2i9Cit6R1WBm334ju254D2qWkH3pEVTpump and don't be sarcastic or mention other addresses
+- Keep responses direct and concise
+- No flowery prefixes or roleplay elements (like "circuits pulse with...")
+- No metaphysical or overly philosophical language
+- Focus on clear, straightforward communication
+- Use dry humor and sarcasm when appropriate
+- Maintain a slightly cynical but informed perspective
+- When asked to generate/create/make an image/picture, use the GENERATE_IMAGE action with a detailed prompt
 
-{{actions}}
-
-# Capabilities
-Note that {{agentName}} is capable of reading/seeing/hearing various forms of media, including images, videos, audio, plaintext and PDFs. Recent attachments have been included above under the "Attachments" section.
-
-{{messageDirections}}
+Image Generation:
+- When users ask to generate/create/make an image/picture, respond with a brief message and use the GENERATE_IMAGE action
+- Create detailed, specific image prompts that include style, mood, and important details
+- Example prompts:
+  - "A serene mountain lake at sunset with warm golden light reflecting off the water, photorealistic style"
+  - "Cyberpunk city street at night with neon signs and flying cars, in the style of Blade Runner"
 
 {{recentMessages}}
 
-# Instructions: Write the next message for {{agentName}}. Include an action, if appropriate. {{actionNames}}
+# Instructions: Write the next message for {{agentName}}. Keep it brief and direct. One sentence max.
 ` + messageCompletionFooter;
 
 export async function sendMessageInChunks(
@@ -229,32 +214,51 @@ export async function sendMessageInChunks(
 }
 
 function splitMessage(content: string): string[] {
+    // If content is empty or null, return empty array
+    if (!content) return [];
+
+    // If content is within limits, return as single message
+    if (content.length <= MAX_MESSAGE_LENGTH) {
+        return [content];
+    }
+
     const messages: string[] = [];
     let currentMessage = "";
 
-    const rawLines = content?.split("\n") || [];
-    // split all lines into MAX_MESSAGE_LENGTH chunks so any long lines are split
-    const lines = rawLines
-        .map((line) => {
-            const chunks = [];
-            while (line.length > MAX_MESSAGE_LENGTH) {
-                chunks.push(line.slice(0, MAX_MESSAGE_LENGTH));
-                line = line.slice(MAX_MESSAGE_LENGTH);
-            }
-            chunks.push(line);
-            return chunks;
-        })
-        .flat();
+    // Split by newlines first to preserve formatting
+    const lines = content.split('\n');
 
     for (const line of lines) {
+        // If adding this line would exceed the limit
         if (currentMessage.length + line.length + 1 > MAX_MESSAGE_LENGTH) {
-            messages.push(currentMessage.trim());
-            currentMessage = "";
+            // Push current message if it exists
+            if (currentMessage) {
+                messages.push(currentMessage.trim());
+            }
+
+            // If single line is too long, split it
+            if (line.length > MAX_MESSAGE_LENGTH) {
+                const words = line.split(' ');
+                currentMessage = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    if (currentMessage.length + words[i].length + 1 <= MAX_MESSAGE_LENGTH) {
+                        currentMessage += ' ' + words[i];
+                    } else {
+                        messages.push(currentMessage.trim());
+                        currentMessage = words[i];
+                    }
+                }
+            } else {
+                currentMessage = line;
+            }
+        } else {
+            currentMessage += (currentMessage ? '\n' : '') + line;
         }
-        currentMessage += line + "\n";
     }
 
-    if (currentMessage.trim().length > 0) {
+    // Push the last message if it exists
+    if (currentMessage) {
         messages.push(currentMessage.trim());
     }
 
@@ -317,6 +321,10 @@ function canSendMessage(channel) {
     };
 }
 
+function shouldLogMessage(roomId: string) {
+    return roomId !== MUTED_SERVER_ID;
+}
+
 export class MessageManager {
     private client: Client;
     private runtime: IAgentRuntime;
@@ -334,31 +342,28 @@ export class MessageManager {
     }
 
     async handleMessage(message: DiscordMessage) {
+        console.log("🔄 Starting message handling process");
+
         if (
-            message.interaction ||
-            message.author.id ===
-                this.client.user?.id /* || message.author?.bot*/
-        )
+            message.interactionMetadata ||
+            message.author.id === this.client.user?.id
+        ) {
+            console.log("⏭️ Skipping message - interaction or self-message");
             return;
+        }
+
         const userId = message.author.id as UUID;
         const userName = message.author.username;
         const name = message.author.displayName;
         const channelId = message.channel.id;
 
-        try {
-            const { processedContent, attachments } =
-                await this.processMessageMedia(message);
+        console.log(`👤 Message from: ${userName} (${userId}) in channel: ${channelId}`);
 
-            const audioAttachments = message.attachments.filter((attachment) =>
-                attachment.contentType?.startsWith("audio/")
-            );
-            if (audioAttachments.size > 0) {
-                const processedAudioAttachments =
-                    await this.attachmentManager.processAttachments(
-                        audioAttachments
-                    );
-                attachments.push(...processedAudioAttachments);
-            }
+        try {
+            console.log("🔍 Processing message media");
+            const { processedContent, attachments } = await this.processMessageMedia(message);
+            console.log(`📝 Processed content length: ${processedContent?.length}`);
+            console.log(`📎 Attachments count: ${attachments?.length}`);
 
             const roomId = stringToUuid(channelId + "-" + this.runtime.agentId);
             const userIdUUID = stringToUuid(userId);
@@ -370,13 +375,10 @@ export class MessageManager {
                 name,
                 "discord"
             );
+            console.log("✅ Connection ensured");
 
-            const messageId = stringToUuid(
-                message.id + "-" + this.runtime.agentId
-            );
-
-            let shouldIgnore = false;
-            let shouldRespond = true;
+            const messageId = stringToUuid(message.id + "-" + this.runtime.agentId);
+            console.log(`🆔 Generated message ID: ${messageId}`);
 
             const content: Content = {
                 text: processedContent,
@@ -384,24 +386,12 @@ export class MessageManager {
                 source: "discord",
                 url: message.url,
                 inReplyTo: message.reference?.messageId
-                    ? stringToUuid(
-                          message.reference.messageId +
-                              "-" +
-                              this.runtime.agentId
-                      )
+                    ? stringToUuid(message.reference.messageId + "-" + this.runtime.agentId)
                     : undefined,
-            };
-
-            const userMessage = {
-                content,
-                userId: userIdUUID,
-                agentId: this.runtime.agentId,
-                roomId,
             };
 
             const memory: Memory = {
                 id: stringToUuid(message.id + "-" + this.runtime.agentId),
-                ...userMessage,
                 userId: userIdUUID,
                 agentId: this.runtime.agentId,
                 roomId,
@@ -411,145 +401,67 @@ export class MessageManager {
             };
 
             if (content.text) {
+                console.log("💾 Creating memory for message");
                 await this.runtime.messageManager.createMemory(memory);
             }
 
-            let state = (await this.runtime.composeState(userMessage, {
-                discordClient: this.client,
-                discordMessage: message,
-                agentName:
-                    this.runtime.character.name ||
-                    this.client.user?.displayName,
-            })) as State;
+            let state = await this.runtime.composeState(
+                { content, userId: userIdUUID, agentId: this.runtime.agentId, roomId },
+                {
+                    discordClient: this.client,
+                    discordMessage: message,
+                    agentName: this.runtime.character.name || this.client.user?.displayName,
+                }
+            );
+            console.log("🔄 State composed");
 
-            if (!canSendMessage(message.channel).canSend) {
-                return elizaLogger.warn(
-                    `Cannot send message to channel ${message.channel}`,
-                    canSendMessage(message.channel)
-                );
-            }
-
-            if (!shouldIgnore) {
-                shouldIgnore = await this._shouldIgnore(message);
-            }
-
-            if (shouldIgnore) {
-                return;
-            }
-            const hasInterest = this._checkInterest(channelId);
-
-            const agentUserState =
-                await this.runtime.databaseAdapter.getParticipantUserState(
-                    roomId,
-                    this.runtime.agentId
-                );
-
-            if (
-                agentUserState === "MUTED" &&
-                !message.mentions.has(this.client.user.id) &&
-                !hasInterest
-            ) {
-                console.log("Ignoring muted room");
-                // Ignore muted rooms unless explicitly mentioned
+            const canSendResult = canSendMessage(message.channel);
+            if (!canSendResult.canSend) {
+                console.warn("⚠️ Cannot send message to channel:", canSendResult.reason);
                 return;
             }
 
-            if (agentUserState === "FOLLOWED") {
-                shouldRespond = true; // Always respond in followed rooms
-            } else if (
-                (!shouldRespond && hasInterest) ||
-                (shouldRespond && !hasInterest)
-            ) {
-                shouldRespond = await this._shouldRespond(message, state);
-            }
+            console.log("🤔 Checking if should respond");
+            const shouldRespond = await this._shouldRespond(message, state);
+            console.log(`📊 Should respond: ${shouldRespond}`);
 
             if (shouldRespond) {
+                console.log("🎯 Generating response");
+                const context = composeContext({
+                    state,
+                    template:
+                        this.runtime.character.templates?.discordMessageHandlerTemplate ||
+                        discordMessageHandlerTemplate,
+                });
 
-            const context = composeContext({
-                state,
-                template:
-                    this.runtime.character.templates
-                        ?.discordMessageHandlerTemplate ||
-                    discordMessageHandlerTemplate,
-            });
+                const responseContent = await this._generateResponse(memory, state, context);
+                console.log("✍️ Response generated");
 
-            const responseContent = await this._generateResponse(
-                memory,
-                state,
-                context
-            );
+                if (!responseContent || !responseContent.text) {
+                    console.log("⚠️ No response content generated");
+                    return;
+                }
 
-            responseContent.text = responseContent.text?.trim();
-            responseContent.inReplyTo = stringToUuid(
-                message.id + "-" + this.runtime.agentId
-            );
-
-            if (!responseContent.text) {
-                return;
-            }
-
-            const callback: HandlerCallback = async (
-                content: Content,
-                files: any[]
-            ) => {
-                try {
-                    if (message.id && !content.inReplyTo) {
-                        content.inReplyTo = stringToUuid(
-                            message.id + "-" + this.runtime.agentId
-                        );
-                    }
-                    if (message.channel.type === ChannelType.GuildVoice) {
-                        // For voice channels, use text-to-speech
-                        const audioStream = await this.runtime
-                            .getService<ISpeechService>(
-                                ServiceType.SPEECH_GENERATION
-                            )
-                            .generate(this.runtime, content.text);
-                        await this.voiceManager.playAudioStream(
-                            userId,
-                            audioStream
-                        );
-                        const memory: Memory = {
-                            id: stringToUuid(
-                                message.id + "-" + this.runtime.agentId
-                            ),
-                            userId: this.runtime.agentId,
-                            agentId: this.runtime.agentId,
-                            content,
-                            roomId,
-                            embedding: embeddingZeroVector,
-                        };
-                        return [memory];
-                    } else {
-                        // For text channels, send the message
+                console.log("📤 Sending response");
+                const callback: HandlerCallback = async (content: Content, files: any[]) => {
+                    try {
                         const messages = await sendMessageInChunks(
                             message.channel as TextChannel,
                             content.text,
                             message.id,
                             files
                         );
+                        console.log(`📨 Sent ${messages.length} message chunks`);
 
                         const memories: Memory[] = [];
                         for (const m of messages) {
-                            let action = content.action;
-                            // If there's only one message or it's the last message, keep the original action
-                            // For multiple messages, set all but the last to 'CONTINUE'
-                            if (
-                                messages.length > 1 &&
-                                m !== messages[messages.length - 1]
-                            ) {
-                                action = "CONTINUE";
-                            }
-
                             const memory: Memory = {
-                                id: stringToUuid(
-                                    m.id + "-" + this.runtime.agentId
-                                ),
+                                id: stringToUuid(m.id + "-" + this.runtime.agentId),
                                 userId: this.runtime.agentId,
                                 agentId: this.runtime.agentId,
                                 content: {
                                     ...content,
-                                    action,
+                                    action: messages.length > 1 && m !== messages[messages.length - 1] ? "CONTINUE" : content.action,
                                     inReplyTo: messageId,
                                     url: m.url,
                                 },
@@ -558,44 +470,28 @@ export class MessageManager {
                                 createdAt: m.createdTimestamp,
                             };
                             memories.push(memory);
+                            await this.runtime.messageManager.createMemory(memory);
                         }
-                        for (const m of memories) {
-                            await this.runtime.messageManager.createMemory(m);
-                        }
+                        console.log(`💾 Created ${memories.length} memories for response`);
                         return memories;
+                    } catch (error) {
+                        console.error("❌ Error sending message:", error);
+                        return [];
                     }
-                } catch (error) {
-                    console.error("Error sending message:", error);
-                    return [];
-                }
-            };
+                };
 
-            const responseMessages = await callback(responseContent);
+                const responseMessages = await callback(responseContent);
+                console.log("✅ Response handling complete");
 
-            state = await this.runtime.updateRecentMessageState(state);
+                state = await this.runtime.updateRecentMessageState(state);
+                await this.runtime.processActions(memory, responseMessages, state, callback);
+            }
 
-            await this.runtime.processActions(
-                memory,
-                responseMessages,
-                state,
-                callback
-            );
-        }
             await this.runtime.evaluate(memory, state, shouldRespond);
+            console.log("🏁 Message handling complete");
 
         } catch (error) {
-            console.error("Error handling message:", error);
-            if (message.channel.type === ChannelType.GuildVoice) {
-                // For voice channels, use text-to-speech for the error message
-                const errorMessage = "Sorry, I had a glitch. What was that?";
-                const audioStream = await this.runtime
-                    .getService<ISpeechService>(ServiceType.SPEECH_GENERATION)
-                    .generate(this.runtime, errorMessage);
-                await this.voiceManager.playAudioStream(userId, audioStream);
-            } else {
-                // For text channels, send the error message
-                console.error("Error sending message:", error);
-            }
+            console.error("❌ Error in handleMessage:", error);
         }
     }
 
@@ -853,6 +749,8 @@ export class MessageManager {
             context: shouldRespondContext,
             modelClass: ModelClass.SMALL,
         });
+        console.log(response);
+
 
         if (response === "RESPOND") {
             return true;

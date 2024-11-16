@@ -7,6 +7,7 @@ import { TelegramClientInterface } from "@ai16z/client-telegram/src/index.ts";
 import { TwitterClientInterface } from "@ai16z/client-twitter/src/index.ts";
 import { defaultCharacter } from "@ai16z/eliza/src/defaultCharacter.ts";
 import { AgentRuntime } from "@ai16z/eliza/src/runtime.ts";
+import { ImageDescriptionService } from "@ai16z/plugin-node/src/services/image.ts";
 import settings from "@ai16z/eliza/src/settings.ts";
 import {
     Character,
@@ -17,6 +18,7 @@ import {
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap/src/index.ts";
 import { solanaPlugin } from "@ai16z/plugin-solana/src/index.ts";
 import { nodePlugin } from "@ai16z/plugin-node/src/index.ts";
+import { imageGenerationPlugin } from "@ai16z/plugin-image-generation/src/index.ts";
 import Database from "better-sqlite3";
 import fs from "fs";
 import readline from "readline";
@@ -214,6 +216,12 @@ export async function createAgent(
     token: string
 ) {
     console.log("Creating runtime for character", character.name);
+    const imageService = new ImageDescriptionService();
+    await imageService.initialize(null, {
+        character: character,
+        getSetting: (key: string) => character.settings?.secrets?.[key]
+    } as IAgentRuntime);
+
     return new AgentRuntime({
         databaseAdapter: db,
         token,
@@ -223,13 +231,14 @@ export async function createAgent(
         plugins: [
             bootstrapPlugin,
             nodePlugin,
+            imageGenerationPlugin,
             character.settings.secrets.WALLET_PUBLIC_KEY
                 ? solanaPlugin
                 : null
         ].filter(Boolean),
         providers: [],
         actions: [],
-        services: [],
+        services: [imageService],
         managers: [],
     });
 }
@@ -277,10 +286,14 @@ const startAgents = async () => {
     } catch (error) {
         console.error("Error starting agents:", error);
     }
-
     function chat() {
         const agentId = characters[0].name ?? "Agent";
-        rl.question("You: ", (input) => handleUserInput(input, agentId));
+        rl.question("You: ", async (input) => {
+            await handleUserInput(input, agentId);
+            if (input.toLowerCase() !== "exit") {
+                chat(); // Call chat() again after response
+            }
+        });
     }
 
     console.log("Chat started. Type 'exit' to quit.");

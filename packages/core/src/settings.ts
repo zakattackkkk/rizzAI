@@ -52,4 +52,5 @@ export function loadEnvConfig() {
 }
 
 export const settings = loadEnvConfig();
+export const MUTED_SERVER_ID = "1253563208833433701";
 export default settings;

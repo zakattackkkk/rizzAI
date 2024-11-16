@@ -82,7 +82,7 @@ export class ImageDescriptionService extends Service {
             )) as Florence2Processor;
             this.tokenizer = await AutoTokenizer.from_pretrained(this.modelId);
         } else {
-            this.modelId = "gpt-4o-mini";
+            this.modelId = "gpt-4-vision-preview";
             this.device = "cloud";
         }
 
@@ -169,79 +169,53 @@ export class ImageDescriptionService extends Service {
         isGif: boolean,
         runtime: IAgentRuntime
     ): Promise<string> {
-        for (let retryAttempts = 0; retryAttempts < 3; retryAttempts++) {
-            try {
-                let body;
-                if (isGif) {
-                    const base64Image = imageData.toString("base64");
-                    body = JSON.stringify({
-                        model: "gpt-4o-mini",
-                        messages: [
-                            {
-                                role: "user",
-                                content: [
-                                    { type: "text", text: prompt },
-                                    {
-                                        type: "image_url",
-                                        image_url: {
-                                            url: `data:image/png;base64,${base64Image}`,
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                        max_tokens: 500,
-                    });
-                } else {
-                    body = JSON.stringify({
-                        model: "gpt-4o-mini",
-                        messages: [
-                            {
-                                role: "user",
-                                content: [
-                                    { type: "text", text: prompt },
-                                    {
-                                        type: "image_url",
-                                        image_url: { url: imageUrl },
-                                    },
-                                ],
-                            },
-                        ],
-                        max_tokens: 300,
-                    });
-                }
-
-                const response = await fetch(
-                    "https://api.openai.com/v1/chat/completions",
+        try {
+            let content;
+            if (isGif || imageUrl.startsWith('data:image')) {
+                // For GIFs or base64 images, use the raw URL
+                content = [
+                    { type: "text", text: prompt },
                     {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${runtime.getSetting("OPENAI_API_KEY")}`,
-                        },
-                        body: body,
+                        type: "image_url",
+                        image_url: { url: imageUrl }
                     }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                return data.choices[0].message.content;
-            } catch (error) {
-                console.log(
-                    `Error during OpenAI request (attempt ${retryAttempts + 1}):`,
-                    error
-                );
-                if (retryAttempts === 2) {
-                    throw error;
-                }
+                ];
+            } else {
+                // For regular URLs, use as is
+                content = [
+                    { type: "text", text: prompt },
+                    {
+                        type: "image_url",
+                        image_url: { url: imageUrl }
+                    }
+                ];
             }
+
+            const body = JSON.stringify({
+                model: "gpt-4-vision-preview",
+                messages: [{ role: "user", content }],
+                max_tokens: 300
+            });
+
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${runtime.getSetting("OPENAI_API_KEY")}`
+                },
+                body
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        } catch (error) {
+            console.log("OpenAI request error:", error);
+            throw error;
         }
-        throw new Error(
-            "Failed to recognize image with OpenAI after 3 attempts"
-        );
     }
 
     private async processQueue(): Promise<void> {

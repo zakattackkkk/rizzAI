@@ -106,23 +106,25 @@ export async function generateText({
             }
 
             case ModelProviderName.GOOGLE:
-                { const google = createGoogleGenerativeAI();
+                {
+                    const google = createGoogleGenerativeAI();
 
-                const { text: anthropicResponse } = await aiGenerateText({
-                    model: google(model),
-                    prompt: context,
-                    system:
-                        runtime.character.system ??
-                        settings.SYSTEM_PROMPT ??
-                        undefined,
-                    temperature: temperature,
-                    maxTokens: max_response_length,
-                    frequencyPenalty: frequency_penalty,
-                    presencePenalty: presence_penalty,
-                });
+                    const { text: anthropicResponse } = await aiGenerateText({
+                        model: google(model),
+                        prompt: context,
+                        system:
+                            runtime.character.system ??
+                            settings.SYSTEM_PROMPT ??
+                            undefined,
+                        temperature: temperature,
+                        maxTokens: max_response_length,
+                        frequencyPenalty: frequency_penalty,
+                        presencePenalty: presence_penalty,
+                    });
 
-                response = anthropicResponse;
-                break; }
+                    response = anthropicResponse;
+                    break;
+                }
 
             case ModelProviderName.ANTHROPIC: {
                 elizaLogger.log("Initializing Anthropic model.");
@@ -392,15 +394,7 @@ export async function splitChunks(
     bleed: number = 100,
     modelClass: string
 ): Promise<string[]> {
-    const model = models[runtime.modelProvider];
-    console.log("model", model);
-
-    console.log("model.model.embedding", model.model.embedding);
-    
-    if(!model.model.embedding) {
-        throw new Error("Model does not support embedding");
-    }
-
+    const model = runtime.model[modelClass];
     const encoding = tiktoken.encoding_for_model(
         model.model.embedding as TiktokenModel
     );
@@ -674,70 +668,47 @@ export const generateImage = async (
         count = 1;
     }
 
-    const model = getModel(runtime.character.modelProvider, ModelClass.IMAGE);
-    const modelSettings = models[runtime.character.modelProvider].imageSettings;
-    // some fallbacks for backwards compat, should remove in the future
-    const apiKey =
-        runtime.token ??
-        runtime.getSetting("TOGETHER_API_KEY") ??
-        runtime.getSetting("OPENAI_API_KEY");
+    const apiKey = runtime.getSetting("OPENAI_API_KEY");
+
+    if (!apiKey) {
+        return {
+            success: false,
+            error: new Error("OpenAI API key not found")
+        };
+    }
 
     try {
-        if (runtime.character.modelProvider === ModelProviderName.LLAMACLOUD) {
-            const together = new Together({ apiKey: apiKey as string });
-            const response = await together.images.create({
-                model: "black-forest-labs/FLUX.1-schnell",
-                prompt,
-                width,
-                height,
-                steps: modelSettings?.steps ?? 4,
-                n: count,
-            });
-            const urls: string[] = [];
-            for (let i = 0; i < response.data.length; i++) {
-                const json = response.data[i].b64_json;
-                // decode base64
-                const base64 = Buffer.from(json, "base64").toString("base64");
-                urls.push(base64);
-            }
-            const base64s = await Promise.all(
-                urls.map(async (url) => {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    const buffer = await blob.arrayBuffer();
-                    let base64 = Buffer.from(buffer).toString("base64");
-                    base64 = "data:image/jpeg;base64," + base64;
-                    return base64;
-                })
-            );
-            return { success: true, data: base64s };
+        // Convert dimensions to DALL-E supported size
+        let size: "1024x1024" | "1792x1024" | "1024x1792";
+        if (width === 1792 && height === 1024) {
+            size = "1792x1024";
+        } else if (width === 1024 && height === 1792) {
+            size = "1024x1792";
         } else {
-            let targetSize = `${width}x${height}`;
-            if (
-                targetSize !== "1024x1024" &&
-                targetSize !== "1792x1024" &&
-                targetSize !== "1024x1792"
-            ) {
-                targetSize = "1024x1024";
-            }
-            const openai = new OpenAI({ apiKey: apiKey as string });
-            const response = await openai.images.generate({
-                model,
-                prompt,
-                size: targetSize as "1024x1024" | "1792x1024" | "1024x1792",
-                n: count,
-                response_format: "b64_json",
-            });
-            const base64s = response.data.map(
-                (image) => `data:image/png;base64,${image.b64_json}`
-            );
-            return { success: true, data: base64s };
+            size = "1024x1024";
         }
+
+        elizaLogger.log(`Generating image with DALL-E. Prompt: "${prompt}"`);
+        const openai = new OpenAI({ apiKey });
+        const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt,
+            n: count,
+            size: size,
+            response_format: "b64_json"
+        });
+
+        const base64s = response.data.map(
+            (image) => `data:image/png;base64,${image.b64_json}`
+        );
+        return { success: true, data: base64s };
     } catch (error) {
-        console.error(error);
+        console.error("Image generation error:", error);
+        elizaLogger.error(`DALL-E image generation failed for prompt: "${prompt}"`);
         return { success: false, error: error };
     }
 };
+
 
 export const generateCaption = async (
     data: { imageUrl: string },

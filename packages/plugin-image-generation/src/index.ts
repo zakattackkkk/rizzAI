@@ -8,18 +8,39 @@ import {
     State,
 } from "@ai16z/eliza/src/types.ts";
 import { generateCaption, generateImage } from "@ai16z/eliza/src/generation.ts";
+import fs from 'fs';
+import path from 'path';
+
+// Helper function to save base64 images
+function saveBase64Image(base64Data: string, filename: string): string {
+    // Create generatedImages directory if it doesn't exist
+    const imageDir = path.join(process.cwd(), 'generatedImages');
+    if (!fs.existsSync(imageDir)) {
+        fs.mkdirSync(imageDir, { recursive: true });
+    }
+
+    // Remove the data:image/png;base64 prefix if it exists
+    const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
+
+    // Create a buffer from the base64 string
+    const imageBuffer = Buffer.from(base64Image, 'base64');
+
+    // Create full file path
+    const filepath = path.join(imageDir, `${filename}.png`);
+
+    // Save the file
+    fs.writeFileSync(filepath, imageBuffer);
+
+    return filepath;
+}
 
 const imageGeneration: Action = {
     name: "GENERATE_IMAGE",
     similes: ["IMAGE_GENERATION", "IMAGE_GEN", "CREATE_IMAGE", "MAKE_PICTURE"],
     description: "Generate an image to go along with the message.",
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const anthropicApiKeyOk = !!runtime.getSetting("ANTHROPIC_API_KEY");
-        const togetherApiKeyOk = !!runtime.getSetting("TOGETHER_API_KEY");
-
-        // TODO: Add openai DALL-E generation as well
-
-        return anthropicApiKeyOk && togetherApiKeyOk;
+        const openAiKeyOk = !!runtime.getSetting("OPENAI_API_KEY");
+        return openAiKeyOk;
     },
     handler: async (
         runtime: IAgentRuntime,
@@ -33,14 +54,13 @@ const imageGeneration: Action = {
         const userId = runtime.agentId;
         elizaLogger.log("User ID:", userId);
 
+        // Extract image prompt from the message content
         const imagePrompt = message.content.text;
         elizaLogger.log("Image prompt received:", imagePrompt);
 
-        // TODO: Generate a prompt for the image
-
         const res: { image: string; caption: string }[] = [];
 
-        elizaLogger.log("Generating image with prompt:", imagePrompt);
+        elizaLogger.log("Attempting image generation with prompt:", imagePrompt);
         const images = await generateImage(
             {
                 prompt: imagePrompt,
@@ -56,47 +76,53 @@ const imageGeneration: Action = {
                 "Image generation successful, number of images:",
                 images.data.length
             );
+
             for (let i = 0; i < images.data.length; i++) {
-                const image = images.data[i];
-                elizaLogger.log(`Processing image ${i + 1}:`, image);
+                const base64Image = images.data[i];
+                // Save the image and get filepath
+                const filename = `generated_${Date.now()}_${i}`;
+                const filepath = saveBase64Image(base64Image, filename);
+                elizaLogger.log(`Processing image ${i + 1}:`, filename);
 
-                const caption = await generateCaption(
-                    {
-                        imageUrl: image,
-                    },
-                    runtime
-                );
-
-                elizaLogger.log(
-                    `Generated caption for image ${i + 1}:`,
-                    caption.title
-                );
-                res.push({ image: image, caption: caption.title });
+                res.push({ image: filepath, caption: "Generated image" });
 
                 callback(
                     {
-                        text: caption.description,
+                        text: "Here's your generated image",
                         attachments: [
                             {
                                 id: crypto.randomUUID(),
-                                url: image,
+                                url: filepath,
                                 title: "Generated image",
                                 source: "imageGeneration",
-                                description: caption.title,
-                                text: caption.description,
+                                description: "AI generated image",
+                                text: imagePrompt,
                             },
                         ],
                     },
-                    []
+                    [
+                        {
+                            attachment: filepath,
+                            name: `${filename}.png`
+                        }
+                    ]
                 );
             }
         } else {
-            elizaLogger.error("Image generation failed or returned no data.");
+            const errorMessage = images.error ?
+                `Image generation failed: ${images.error.message}` :
+                "Image generation failed or returned no data.";
+            elizaLogger.error(`Failed to generate image. Prompt: "${imagePrompt}". Error: ${errorMessage}`);
+            callback(
+                {
+                    text: errorMessage,
+                    error: true
+                },
+                []
+            );
         }
     },
     examples: [
-        // TODO: We want to generate images in more abstract ways, not just when asked to generate an image
-
         [
             {
                 user: "{{user1}}",
