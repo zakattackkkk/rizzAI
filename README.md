@@ -1,5 +1,11 @@
 # BrahVerse
-BrahVerse is the AI version of InverseBrah. He takes a screenshot of any post you tag him in and shares what he thinks.
+BrahVerse is the AI version of InverseBrah. He takes a screenshot of any post you tag him in and shares his thoughts.  
+Here’s what changed in the code. For details, please check the commits:
+
+- **BrahVerse now uses the API from** [tweet2img](https://github.com/mhsattarian/tweet2img) **to generate screenshots of tweets.**
+- **Improved** `packages/core/src/generation.ts` **to work with images** – [commit](https://github.com/ai16z/eliza/commit/b5ae9c036657eee4f0f2c6c12923d43069e3bd98).  
+- **Edited the prompt to add a screenshot function and increased the delay time for checking interactions (from 10 to 30 minutes)** – [commit](https://github.com/ai16z/eliza/commit/5c25958e848ab8ff7e69c3108edbdd16edd9edf2).  
+- **Customized the character using** [twitter-scraper-finetune](https://github.com/ai16z/twitter-scraper-finetune) **to scrape posts** – [commit](https://github.com/ai16z/eliza/commit/2ce6c97ce961acfb92a1ae33a1e5fbeea67d6d97).  
 
 ![banner](https://github.com/user-attachments/assets/430083aa-de0d-4d7c-a4d1-20a3a7e96445)
 
