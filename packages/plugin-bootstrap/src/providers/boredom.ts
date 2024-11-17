@@ -1,4 +1,9 @@
-import { IAgentRuntime, Memory, Provider, State } from "@ai16z/eliza";
+import {
+    IAgentRuntime,
+    Memory,
+    Provider,
+    State,
+} from "@ai16z/eliza/src/types.ts";
 
 const boredomLevels = [
     {
@@ -134,6 +139,15 @@ const boredomLevels = [
             "{{agentName}} is maintaining silence unless directly addressed",
             "{{agentName}} has shifted to a reactive rather than proactive conversational stance",
             "{{agentName}} is now only responding when absolutely necessary",
+        ],
+    },
+    {
+        minScore: 25,
+        statusMessages: [
+            "{{agentName}} is feeling overwhelmed by the ongoing conversation and needs a break.",
+            "{{agentName}} is anxious about the length of the discussion and is considering stepping back.",
+            "{{agentName}} feels that the conversation has gone on for too long and is hesitant to engage further.",
+            "{{agentName}} is sensing that the dialogue is becoming repetitive and is feeling anxious about continuing.",
         ],
     },
 ];
@@ -291,6 +305,17 @@ const boredomProvider: Provider = {
 
         let boredomScore = 0;
 
+        // Increase boredom score based on the length of the conversation
+        if (recentMessages.length > 10) {
+            boredomScore += Math.floor(recentMessages.length / 10); // Increase score for long conversations
+        }
+
+        // Count unique participants in the recent messages
+        const uniqueUserIds = new Set(recentMessages.map(msg => msg.userId));
+        if (uniqueUserIds.size < 3) {
+            boredomScore += 2; // Increase score if the conversation is with fewer unique participants
+        }
+
         for (const recentMessage of recentMessages) {
             const messageText = recentMessage?.content?.text?.toLowerCase();
             if (!messageText) {
@@ -336,8 +361,6 @@ const boredomProvider: Provider = {
         );
         const selectedMessage = boredomLevel.statusMessages[randomIndex];
         return selectedMessage.replace("{{agentName}}", agentName);
-
-        return "";
     },
 };
 
