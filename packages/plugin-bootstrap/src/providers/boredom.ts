@@ -290,6 +290,8 @@ const boredomProvider: Provider = {
         });
 
         let boredomScore = 0;
+        const userMessageCounts: Record<string, number> = {};
+        const recentUserActivity: Set<string> = new Set();
 
         for (const recentMessage of recentMessages) {
             const messageText = recentMessage?.content?.text?.toLowerCase();
@@ -298,6 +300,8 @@ const boredomProvider: Provider = {
             }
 
             if (recentMessage.userId !== agentId) {
+                userMessageCounts[recentMessage.userId] =
+                    (userMessageCounts[recentMessage.userId] || 0) + 1;
                 // if message text includes any of the interest words, subtract 1 from the boredom score
                 if (interestWords.some((word) => messageText.includes(word))) {
                     boredomScore -= 1;
@@ -326,6 +330,28 @@ const boredomProvider: Provider = {
             }
         }
 
+        const uniqueUsers = Object.keys(userMessageCounts);
+        const recentUsers = Array.from(recentUserActivity);
+
+        // penalty for repetitive recent interactions
+        // probably change totalMessages value
+        if (recentUsers.length <= 2 && recentMessages.length > 10) {
+            boredomScore += 1;
+        }
+
+        if (uniqueUsers.length < 3) {
+            // if less than 3 unique users, assume repetitive interaction
+            const totalMessages = Object.values(userMessageCounts).reduce(
+                (a, b) => a + b,
+                0
+            );
+
+            // probably change totalMessages value
+            if (totalMessages > 10) {
+                boredomScore += 1;
+            }
+        }
+
         const boredomLevel =
             boredomLevels
                 .filter((level) => boredomScore >= level.minScore)
@@ -336,8 +362,6 @@ const boredomProvider: Provider = {
         );
         const selectedMessage = boredomLevel.statusMessages[randomIndex];
         return selectedMessage.replace("{{agentName}}", agentName);
-
-        return "";
     },
 };
 
