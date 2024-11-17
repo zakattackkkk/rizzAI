@@ -74,288 +74,234 @@ IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive ab
 
 export class TwitterInteractionClient extends ClientBase {
     onReady() {
-        const handleTwitterInteractionsLoop = () => {
-            this.handleTwitterInteractions();
-            setTimeout(
-                handleTwitterInteractionsLoop,
-                (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
-            ); // Random interval between 2-5 minutes
+        const handleTwitterInteractionsLoop = async () => {
+            try {
+                await this.handleTwitterInteractions();
+            } catch (error) {
+                console.error("Error in Twitter interaction loop:", error);
+            } finally {
+                setTimeout(
+                    handleTwitterInteractionsLoop,
+                    (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000 // Random interval between 2-5 minutes
+                );
+            }
         };
         handleTwitterInteractionsLoop();
     }
 
     constructor(runtime: IAgentRuntime) {
-        super({
-            runtime,
-        });
+        super({ runtime });
     }
 
     async handleTwitterInteractions() {
-        console.log("Checking Twitter interactions");
+        console.log("Checking Twitter interactions...");
         try {
-            // Check for mentions
-            const tweetCandidates = (
-                await this.fetchSearchTweets(
-                    `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
-                    20,
-                    SearchMode.Latest
-                )
-            ).tweets;
+            const tweets = await this.fetchSearchTweets(
+                `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
+                20,
+                SearchMode.Latest
+            );
+            const tweetCandidates = this.filterValidTweets(tweets.tweets);
 
-            // de-duplicate tweetCandidates with a set
-            const uniqueTweetCandidates = [...new Set(tweetCandidates)];
+            console.log(
+                `Found ${tweetCandidates.length} valid tweet(s) to process.`
+            );
 
-            // Sort tweet candidates by ID in ascending order
-            uniqueTweetCandidates
-                .sort((a, b) => a.id.localeCompare(b.id))
-                .filter((tweet) => tweet.userId !== this.twitterUserId);
+            const groupedTweets =
+                this.groupTweetsByConversation(tweetCandidates);
 
-            // for each tweet candidate, handle the tweet
-            for (const tweet of uniqueTweetCandidates) {
-                if (
-                    !this.lastCheckedTweetId ||
-                    parseInt(tweet.id) > this.lastCheckedTweetId
-                ) {
-                    const conversationId =
-                        tweet.conversationId + "-" + this.runtime.agentId;
-
-                    const roomId = stringToUuid(conversationId);
-
-                    const userIdUUID = stringToUuid(tweet.userId as string);
-
-                    await this.runtime.ensureConnection(
-                        userIdUUID,
-                        roomId,
-                        tweet.username,
-                        tweet.name,
-                        "twitter"
-                    );
-
-                    await buildConversationThread(tweet, this);
-
-                    const message = {
-                        content: { text: tweet.text },
-                        agentId: this.runtime.agentId,
-                        userId: userIdUUID,
-                        roomId,
-                    };
-
-                    await this.handleTweet({
-                        tweet,
-                        message,
-                    });
-
-                    // Update the last checked tweet ID after processing each tweet
-                    this.lastCheckedTweetId = parseInt(tweet.id);
-
-                    try {
-                        if (this.lastCheckedTweetId) {
-                            fs.writeFileSync(
-                                this.tweetCacheFilePath,
-                                this.lastCheckedTweetId.toString(),
-                                "utf-8"
-                            );
-                        }
-                    } catch (error) {
-                        console.error(
-                            "Error saving latest checked tweet ID to file:",
-                            error
-                        );
-                    }
-                }
+            for (const [conversationId, tweets] of Object.entries(
+                groupedTweets
+            )) {
+                await this.handleConversation(conversationId, tweets);
             }
 
-            // Save the latest checked tweet ID to the file
-            try {
-                if (this.lastCheckedTweetId) {
-                    fs.writeFileSync(
-                        this.tweetCacheFilePath,
-                        this.lastCheckedTweetId.toString(),
-                        "utf-8"
-                    );
-                }
-            } catch (error) {
-                console.error(
-                    "Error saving latest checked tweet ID to file:",
-                    error
-                );
-            }
-
-            console.log("Finished checking Twitter interactions");
+            console.log("Finished processing Twitter interactions.");
         } catch (error) {
-            console.error("Error handling Twitter interactions:", error);
+            console.error("Error while handling Twitter interactions:", error);
         }
     }
 
-    private async handleTweet({
-        tweet,
-        message,
-    }: {
-        tweet: Tweet;
-        message: Memory;
-    }) {
+    filterValidTweets(tweets: Tweet[]): Tweet[] {
+        const seenIds = new Set();
+        return tweets
+            .filter((tweet) => tweet.userId !== this.twitterUserId) // Exclude bot's tweets
+            .filter((tweet) => tweet.text && !seenIds.has(tweet.id)) // Exclude empty or duplicate tweets
+            .map((tweet) => {
+                seenIds.add(tweet.id);
+                return tweet;
+            });
+    }
+
+    groupTweetsByConversation(tweets: Tweet[]): Record<string, Tweet[]> {
+        return tweets.reduce((acc, tweet) => {
+            const key = `${tweet.conversationId}-${this.runtime.agentId}`;
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(tweet);
+            return acc;
+        }, {});
+    }
+
+    async handleConversation(conversationId: string, tweets: Tweet[]) {
+        console.log(`Processing conversation: ${conversationId}`);
+        try {
+            const roomId = stringToUuid(conversationId);
+            for (const tweet of tweets) {
+                const userIdUUID = stringToUuid(tweet.userId as string);
+
+                await this.runtime.ensureConnection(
+                    userIdUUID,
+                    roomId,
+                    tweet.username,
+                    tweet.name,
+                    "twitter"
+                );
+
+                const message = {
+                    content: { text: tweet.text },
+                    agentId: this.runtime.agentId,
+                    userId: userIdUUID,
+                    roomId,
+                };
+
+                await this.handleTweet({ tweet, message });
+                this.updateLastCheckedTweetId(tweet.id);
+            }
+        } catch (error) {
+            console.error(
+                `Error processing conversation ${conversationId}:`,
+                error
+            );
+        }
+    }
+
+    async handleTweet({ tweet, message }: { tweet: Tweet; message: Memory }) {
         if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
-            console.log("skipping tweet from bot itself", tweet.id);
-            // Skip processing if the tweet is from the bot itself
+            console.log("Skipping tweet from bot itself:", tweet.id);
             return;
         }
 
         if (!message.content.text) {
-            console.log("skipping tweet with no text", tweet.id);
-            return { text: "", action: "IGNORE" };
-        }
-        console.log("handling tweet", tweet.id);
-        const formatTweet = (tweet: Tweet) => {
-            return `  ID: ${tweet.id}
-  From: ${tweet.name} (@${tweet.username})
-  Text: ${tweet.text}`;
-        };
-        const currentPost = formatTweet(tweet);
-
-        let homeTimeline = [];
-        // read the file if it exists
-        if (fs.existsSync("tweetcache/home_timeline.json")) {
-            homeTimeline = JSON.parse(
-                fs.readFileSync("tweetcache/home_timeline.json", "utf-8")
-            );
-        } else {
-            homeTimeline = await this.fetchHomeTimeline(50);
-            fs.writeFileSync(
-                "tweetcache/home_timeline.json",
-                JSON.stringify(homeTimeline, null, 2)
-            );
+            console.log("Skipping tweet with no text:", tweet.id);
+            return;
         }
 
-        const formattedHomeTimeline =
-            `# ${this.runtime.character.name}'s Home Timeline\n\n` +
-            homeTimeline
-                .map((tweet) => {
-                    return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})${tweet.inReplyToStatusId ? ` In reply to: ${tweet.inReplyToStatusId}` : ""}\nText: ${tweet.text}\n---\n`;
-                })
-                .join("\n");
+        console.log("Handling tweet:", tweet.id);
+        const context = await this.composeTweetContext(tweet, message);
 
-        let state = await this.runtime.composeState(message, {
+        const shouldRespond = await this.evaluateShouldRespond(context);
+        if (!shouldRespond) {
+            console.log("Decision: IGNORE tweet:", tweet.id);
+            return;
+        }
+
+        const response = await this.generateResponse(context);
+        if (response?.text) {
+            await this.sendTweetResponse(tweet, response, message.roomId);
+        }
+    }
+
+    async composeTweetContext(tweet: Tweet, message: Memory): Promise<State> {
+        const formattedTimeline = await this.getFormattedTimeline();
+        const currentPost = this.formatTweet(tweet);
+
+        return this.runtime.composeState(message, {
             twitterClient: this.twitterClient,
             twitterUserName: this.runtime.getSetting("TWITTER_USERNAME"),
             currentPost,
-            timeline: formattedHomeTimeline,
+            timeline: formattedTimeline,
         });
+    }
 
-        // check if the tweet exists, save if it doesn't
-        const tweetId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
-        const tweetExists =
-            await this.runtime.messageManager.getMemoryById(tweetId);
-
-        if (!tweetExists) {
-            console.log("tweet does not exist, saving");
-            const userIdUUID = stringToUuid(tweet.userId as string);
-            const roomId = stringToUuid(tweet.conversationId);
-
-            const message = {
-                id: tweetId,
-                agentId: this.runtime.agentId,
-                content: {
-                    text: tweet.text,
-                    url: tweet.permanentUrl,
-                    inReplyTo: tweet.inReplyToStatusId
-                        ? stringToUuid(
-                              tweet.inReplyToStatusId +
-                                  "-" +
-                                  this.runtime.agentId
-                          )
-                        : undefined,
-                },
-                userId: userIdUUID,
-                roomId,
-                createdAt: tweet.timestamp * 1000,
-            };
-            this.saveRequestMessage(message, state);
-        }
-
-        console.log("composeState done");
-
+    async evaluateShouldRespond(context: State): Promise<boolean> {
         const shouldRespondContext = composeContext({
-            state,
+            state: context,
             template:
                 this.runtime.character.templates
                     ?.twitterShouldRespondTemplate ||
-                this.runtime.character?.templates?.shouldRespondTemplate ||
                 twitterShouldRespondTemplate,
         });
 
-        const shouldRespond = await generateShouldRespond({
+        const result = await generateShouldRespond({
             runtime: this.runtime,
             context: shouldRespondContext,
             modelClass: ModelClass.SMALL,
         });
 
-        if (!shouldRespond) {
-            console.log("Not responding to message");
-            return { text: "", action: "IGNORE" };
-        }
+        return result === "RESPOND";
+    }
 
-        const context = composeContext({
-            state,
+    async generateResponse(context: State): Promise<Content> {
+        const responseContext = composeContext({
+            state: context,
             template:
                 this.runtime.character.templates
                     ?.twitterMessageHandlerTemplate ||
-                this.runtime.character?.templates?.messageHandlerTemplate ||
                 twitterMessageHandlerTemplate,
         });
 
-        const response = await generateMessageResponse({
+        return await generateMessageResponse({
             runtime: this.runtime,
-            context,
+            context: responseContext,
             modelClass: ModelClass.SMALL,
         });
+    }
 
-        const stringId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
+    async sendTweetResponse(tweet: Tweet, response: Content, roomId: string) {
+        try {
+            const memories = await sendTweet(
+                this,
+                response,
+                roomId,
+                this.runtime.getSetting("TWITTER_USERNAME"),
+                tweet.id
+            );
 
-        response.inReplyTo = stringId;
-
-        if (response.text) {
-            try {
-                const callback: HandlerCallback = async (response: Content) => {
-                    const memories = await sendTweet(
-                        this,
-                        response,
-                        message.roomId,
-                        this.runtime.getSetting("TWITTER_USERNAME"),
-                        tweet.id
-                    );
-                    return memories;
-                };
-
-                const responseMessages = await callback(response);
-
-                state = (await this.runtime.updateRecentMessageState(
-                    state
-                )) as State;
-
-                for (const responseMessage of responseMessages) {
-                    await this.runtime.messageManager.createMemory(
-                        responseMessage
-                    );
-                }
-
-                await this.runtime.evaluate(message, state);
-
-                await this.runtime.processActions(
-                    message,
-                    responseMessages,
-                    state
-                );
-                const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
-                // f tweets folder dont exist, create
-                if (!fs.existsSync("tweets")) {
-                    fs.mkdirSync("tweets");
-                }
-                const debugFileName = `tweets/tweet_generation_${tweet.id}.txt`;
-                fs.writeFileSync(debugFileName, responseInfo);
-                await wait();
-            } catch (error) {
-                console.error(`Error sending response tweet: ${error}`);
+            for (const memory of memories) {
+                await this.runtime.messageManager.createMemory(memory);
             }
+        } catch (error) {
+            console.error(
+                `Error sending tweet response to ${tweet.id}:`,
+                error
+            );
         }
+    }
+
+    formatTweet(tweet: Tweet): string {
+        return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})\nText: ${tweet.text}`;
+    }
+
+    async getFormattedTimeline(): Promise<string> {
+        try {
+            let homeTimeline = [];
+            const cacheFile = "tweetcache/home_timeline.json";
+
+            if (fs.existsSync(cacheFile)) {
+                homeTimeline = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
+            } else {
+                homeTimeline = await this.fetchHomeTimeline(50);
+                fs.writeFileSync(
+                    cacheFile,
+                    JSON.stringify(homeTimeline, null, 2)
+                );
+            }
+
+            return homeTimeline
+                .map((tweet) => this.formatTweet(tweet))
+                .join("\n---\n");
+        } catch (error) {
+            console.error("Error fetching or formatting home timeline:", error);
+            return "Error loading timeline.";
+        }
+    }
+
+    updateLastCheckedTweetId(tweetId: string) {
+        this.lastCheckedTweetId = parseInt(tweetId, 10);
+        fs.writeFileSync(
+            this.tweetCacheFilePath,
+            this.lastCheckedTweetId.toString(),
+            "utf-8"
+        );
     }
 }
