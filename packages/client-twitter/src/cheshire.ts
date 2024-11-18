@@ -1,4 +1,4 @@
-import { Tweet } from "@ai16z/agent-twitter-client";
+import { Tweet } from "agent-twitter-client";
 import fs from "fs";
 import {
     composeContext,
