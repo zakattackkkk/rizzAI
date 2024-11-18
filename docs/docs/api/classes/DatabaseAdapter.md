@@ -31,7 +31,11 @@ The database instance.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:21](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L21)
+=======
+[packages/core/src/database.ts:21](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L21)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ## Methods
 
@@ -63,7 +67,11 @@ A Promise that resolves to a boolean indicating success or failure.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:266](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L266)
+=======
+[packages/core/src/database.ts:266](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L266)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -99,7 +107,11 @@ A Promise that resolves to the number of memories.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:179](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L179)
+=======
+[packages/core/src/database.ts:179](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L179)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -127,7 +139,11 @@ A Promise that resolves when the account creation is complete.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:34](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L34)
+=======
+[packages/core/src/database.ts:34](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L34)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -155,7 +171,11 @@ A Promise that resolves when the goal has been created.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:209](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L209)
+=======
+[packages/core/src/database.ts:209](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L209)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -191,7 +211,11 @@ A Promise that resolves when the memory has been created.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:150](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L150)
+=======
+[packages/core/src/database.ts:150](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L150)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -223,7 +247,11 @@ A Promise that resolves to a boolean indicating success or failure of the creati
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:312](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L312)
+=======
+[packages/core/src/database.ts:312](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L312)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -251,7 +279,11 @@ A Promise that resolves to the UUID of the created room.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:237](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L237)
+=======
+[packages/core/src/database.ts:237](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L237)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -279,7 +311,11 @@ A Promise that resolves to the Account object or null if not found.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:27](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L27)
+=======
+[packages/core/src/database.ts:27](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L27)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -309,7 +345,11 @@ A Promise that resolves to an array of Actor objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:99](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L99)
+=======
+[packages/core/src/database.ts:99](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L99)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -349,7 +389,11 @@ A Promise that resolves to an array of objects containing embeddings and levensh
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:61](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L61)
+=======
+[packages/core/src/database.ts:61](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L61)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -385,7 +429,11 @@ A Promise that resolves to an array of Goal objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:190](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L190)
+=======
+[packages/core/src/database.ts:190](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L190)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -421,7 +469,11 @@ A Promise that resolves to an array of Memory objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:41](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L41)
+=======
+[packages/core/src/database.ts:41](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L41)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -449,7 +501,11 @@ A Promise that resolves to an array of Memory objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:48](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L48)
+=======
+[packages/core/src/database.ts:48](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L48)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -471,7 +527,11 @@ A Promise that resolves to an array of Memory objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:54](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L54)
+=======
+[packages/core/src/database.ts:54](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L54)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -501,7 +561,11 @@ A Promise that resolves to an array of Participant objects.
 
 ##### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:281](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L281)
+=======
+[packages/core/src/database.ts:281](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L281)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 #### getParticipantsForAccount(userId)
 
@@ -527,7 +591,11 @@ A Promise that resolves to an array of Participant objects.
 
 ##### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:288](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L288)
+=======
+[packages/core/src/database.ts:288](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L288)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -555,7 +623,11 @@ A Promise that resolves to an array of UUIDs representing the participants.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:295](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L295)
+=======
+[packages/core/src/database.ts:295](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L295)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -579,7 +651,11 @@ A Promise that resolves to an array of UUIDs representing the participants.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:297](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L297)
+=======
+[packages/core/src/database.ts:297](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L297)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -611,7 +687,11 @@ A Promise that resolves to the Relationship object or null if not found.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:322](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L322)
+=======
+[packages/core/src/database.ts:322](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L322)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -641,7 +721,11 @@ A Promise that resolves to an array of Relationship objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:332](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L332)
+=======
+[packages/core/src/database.ts:332](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L332)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -669,7 +753,11 @@ A Promise that resolves to the room ID or null if not found.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:230](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L230)
+=======
+[packages/core/src/database.ts:230](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L230)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -697,7 +785,11 @@ A Promise that resolves to an array of room IDs.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:251](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L251)
+=======
+[packages/core/src/database.ts:251](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L251)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -725,7 +817,11 @@ A Promise that resolves to an array of room IDs.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:258](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L258)
+=======
+[packages/core/src/database.ts:258](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L258)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -761,7 +857,11 @@ A Promise that resolves when the log entry has been saved.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:87](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L87)
+=======
+[packages/core/src/database.ts:87](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L87)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -789,7 +889,11 @@ A Promise that resolves when all goals have been removed.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:223](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L223)
+=======
+[packages/core/src/database.ts:223](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L223)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -821,7 +925,11 @@ A Promise that resolves when all memories have been removed.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:170](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L170)
+=======
+[packages/core/src/database.ts:170](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L170)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -849,7 +957,11 @@ A Promise that resolves when the goal has been removed.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:216](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L216)
+=======
+[packages/core/src/database.ts:216](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L216)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -881,7 +993,11 @@ A Promise that resolves when the memory has been removed.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:162](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L162)
+=======
+[packages/core/src/database.ts:162](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L162)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -913,7 +1029,11 @@ A Promise that resolves to a boolean indicating success or failure.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:274](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L274)
+=======
+[packages/core/src/database.ts:274](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L274)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -941,7 +1061,11 @@ A Promise that resolves when the room has been removed.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:244](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L244)
+=======
+[packages/core/src/database.ts:244](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L244)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -981,7 +1105,11 @@ A Promise that resolves to an array of Memory objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:106](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L106)
+=======
+[packages/core/src/database.ts:106](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L106)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -1025,7 +1153,11 @@ A Promise that resolves to an array of Memory objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:131](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L131)
+=======
+[packages/core/src/database.ts:131](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L131)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -1051,7 +1183,11 @@ A Promise that resolves to an array of Memory objects.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:301](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L301)
+=======
+[packages/core/src/database.ts:301](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L301)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -1079,7 +1215,11 @@ A Promise that resolves when the goal has been updated.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:202](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L202)
+=======
+[packages/core/src/database.ts:202](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L202)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -1111,4 +1251,8 @@ A Promise that resolves when the goal status has been updated.
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/database.ts:120](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/database.ts#L120)
+=======
+[packages/core/src/database.ts:120](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/database.ts#L120)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2

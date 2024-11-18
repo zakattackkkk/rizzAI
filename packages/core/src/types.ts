@@ -114,6 +114,7 @@ export type Models = {
     [ModelProviderName.REDPILL]: Model;
     [ModelProviderName.OPENROUTER]: Model;
     [ModelProviderName.OLLAMA]: Model;
+    [ModelProviderName.HEURIST]: Model;
 };
 
 export enum ModelProviderName {
@@ -128,6 +129,7 @@ export enum ModelProviderName {
     REDPILL = "redpill",
     OPENROUTER = "openrouter",
     OLLAMA = "ollama",
+    HEURIST = "heurist",
 }
 
 /**
@@ -352,6 +354,16 @@ export type Character = {
         model?: string;
         embeddingModel?: string;
     };
+    clientConfig?: {
+        discord?: {
+            shouldIgnoreBotMessages?: boolean;
+            shouldIgnoreDirectMessages?: boolean;
+        };
+        telegram?: {
+            shouldIgnoreBotMessages?: boolean;
+            shouldIgnoreDirectMessages?: boolean;
+        };
+    };
     style: {
         all: string[];
         chat: string[];
@@ -536,7 +548,7 @@ export interface IAgentRuntime {
 
     getMemoryManager(name: string): IMemoryManager | null;
 
-    getService<Service>(service: string): Service | null;
+    getService(service: string): typeof Service | null;
 
     registerService(service: Service): void;
 

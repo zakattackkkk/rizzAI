@@ -1,12 +1,7 @@
 import { embed } from "@ai16z/eliza/src/embedding.ts";
 import { MemoryManager } from "@ai16z/eliza/src/memory.ts";
 import { formatMessages } from "@ai16z/eliza/src/messages.ts";
-import {
-    IAgentRuntime,
-    Memory,
-    Provider,
-    State,
-} from "@ai16z/eliza/src/types.ts";
+import { IAgentRuntime, Memory, Provider, State } from "@ai16z/eliza";
 import { formatFacts } from "../evaluators/fact.ts";
 
 const factsProvider: Provider = {
@@ -19,9 +14,6 @@ const factsProvider: Provider = {
         });
 
         const embedding = await embed(runtime, recentMessages);
-
-        console.log("embedding", embedding);
-        console.log("embedding length", embedding.length);
 
         const memoryManager = new MemoryManager({
             runtime,

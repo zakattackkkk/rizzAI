@@ -10,7 +10,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:169](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L169)
+=======
+[packages/core/src/types.ts:169](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L169)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -20,7 +24,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:171](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L171)
+=======
+[packages/core/src/types.ts:171](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L171)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -30,7 +38,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:170](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L170)
+=======
+[packages/core/src/types.ts:170](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L170)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -40,7 +52,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:172](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L172)
+=======
+[packages/core/src/types.ts:172](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L172)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -50,7 +66,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:167](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L167)
+=======
+[packages/core/src/types.ts:167](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L167)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -60,7 +80,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:173](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L173)
+=======
+[packages/core/src/types.ts:173](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L173)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -70,7 +94,11 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:174](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L174)
+=======
+[packages/core/src/types.ts:174](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L174)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ***
 
@@ -80,4 +108,8 @@ Represents a memory record, which could be a message or any other piece of infor
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:168](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L168)
+=======
+[packages/core/src/types.ts:168](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L168)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2

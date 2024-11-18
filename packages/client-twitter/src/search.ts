@@ -14,7 +14,7 @@ import {
     ModelClass,
     ServiceType,
     State,
-} from "@ai16z/eliza/src/types.ts";
+} from "@ai16z/eliza";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 import { ClientBase } from "./base.ts";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
@@ -237,9 +237,8 @@ export class TwitterSearchClient extends ClientBase {
             const imageDescriptions = [];
             for (const photo of selectedTweet.photos) {
                 const description = await this.runtime
-                    .getService<IImageDescriptionService>(
-                        ServiceType.IMAGE_DESCRIPTION
-                    )
+                    .getService(ServiceType.IMAGE_DESCRIPTION)
+                    .getInstance<IImageDescriptionService>()
                     .describeImage(photo.url);
                 imageDescriptions.push(description);
             }

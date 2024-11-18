@@ -1,22 +1,22 @@
-import { PostgresDatabaseAdapter } from "@ai16z/adapter-postgres/src/index.ts";
-import { SqliteDatabaseAdapter } from "@ai16z/adapter-sqlite/src/index.ts";
-import { DirectClientInterface } from "@ai16z/client-direct/src/index.ts";
-import { DiscordClientInterface } from "@ai16z/client-discord/src/index.ts";
-import { AutoClientInterface } from "@ai16z/client-auto/src/index.ts";
-import { TelegramClientInterface } from "@ai16z/client-telegram/src/index.ts";
-import { TwitterClientInterface } from "@ai16z/client-twitter/src/index.ts";
-import { defaultCharacter } from "@ai16z/eliza/src/defaultCharacter.ts";
-import { AgentRuntime } from "@ai16z/eliza/src/runtime.ts";
-import settings from "@ai16z/eliza/src/settings.ts";
+import { PostgresDatabaseAdapter } from "@ai16z/adapter-postgres";
+import { SqliteDatabaseAdapter } from "@ai16z/adapter-sqlite";
+import { DirectClientInterface } from "@ai16z/client-direct";
+import { DiscordClientInterface } from "@ai16z/client-discord";
+import { AutoClientInterface } from "@ai16z/client-auto";
+import { TelegramClientInterface } from "@ai16z/client-telegram";
+import { TwitterClientInterface } from "@ai16z/client-twitter";
+import { defaultCharacter } from "@ai16z/eliza";
+import { AgentRuntime } from "@ai16z/eliza";
+import { settings } from "@ai16z/eliza";
 import {
     Character,
     IAgentRuntime,
     IDatabaseAdapter,
     ModelProviderName,
-} from "@ai16z/eliza/src/types.ts";
-import { bootstrapPlugin } from "@ai16z/plugin-bootstrap/src/index.ts";
-import { solanaPlugin } from "@ai16z/plugin-solana/src/index.ts";
-import { nodePlugin } from "@ai16z/plugin-node/src/index.ts";
+} from "@ai16z/eliza";
+import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
+import { solanaPlugin } from "@ai16z/plugin-solana";
+import { nodePlugin } from "@ai16z/plugin-node";
 import Database from "better-sqlite3";
 import fs from "fs";
 import readline from "readline";
@@ -145,6 +145,16 @@ export function getTokenForProvider(
                 character.settings?.secrets?.OPENROUTER ||
                 settings.OPENROUTER_API_KEY
             );
+        case ModelProviderName.GROK:
+            return (
+                character.settings?.secrets?.GROK_API_KEY ||
+                settings.GROK_API_KEY
+            );
+        case ModelProviderName.HEURIST:
+            return (
+                character.settings?.secrets?.HEURIST_API_KEY ||
+                settings.HEURIST_API_KEY
+            );
     }
 }
 
@@ -214,6 +224,7 @@ export async function createAgent(
     token: string
 ) {
     console.log("Creating runtime for character", character.name);
+    console.log("character.settings.secrets?.WALLET_PUBLIC_KEY", character.settings.secrets?.WALLET_PUBLIC_KEY)
     return new AgentRuntime({
         databaseAdapter: db,
         token,
@@ -223,9 +234,7 @@ export async function createAgent(
         plugins: [
             bootstrapPlugin,
             nodePlugin,
-            character.settings.secrets?.WALLET_PUBLIC_KEY
-                ? solanaPlugin
-                : null
+            character.settings.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
         ].filter(Boolean),
         providers: [],
         actions: [],
@@ -303,7 +312,6 @@ const rl = readline.createInterface({
 });
 
 async function handleUserInput(input, agentId) {
-    console.log("handleUserInput", input, agentId);
     if (input.toLowerCase() === "exit") {
         rl.close();
         return;

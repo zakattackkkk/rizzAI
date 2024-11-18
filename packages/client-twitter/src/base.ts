@@ -6,7 +6,7 @@ import {
     Memory,
     State,
     UUID,
-} from "@ai16z/eliza/src/types.ts";
+} from "@ai16z/eliza";
 import {
     QueryTweetsResponse,
     Scraper,
@@ -218,7 +218,8 @@ export class ClientBase extends EventEmitter {
                     await this.twitterClient.login(
                         this.runtime.getSetting("TWITTER_USERNAME"),
                         this.runtime.getSetting("TWITTER_PASSWORD"),
-                        this.runtime.getSetting("TWITTER_EMAIL")
+                        this.runtime.getSetting("TWITTER_EMAIL"),
+                        this.runtime.getSetting("TWITTER_2FA_SECRET")
                     );
                     console.log("Logged in to Twitter");
                     const cookies = await this.twitterClient.getCookies();
@@ -240,7 +241,8 @@ export class ClientBase extends EventEmitter {
                     await this.twitterClient.login(
                         this.runtime.getSetting("TWITTER_USERNAME"),
                         this.runtime.getSetting("TWITTER_PASSWORD"),
-                        this.runtime.getSetting("TWITTER_EMAIL")
+                        this.runtime.getSetting("TWITTER_EMAIL"),
+                        this.runtime.getSetting("TWITTER_2FA_SECRET")
                     );
 
                     const cookies = await this.twitterClient.getCookies();

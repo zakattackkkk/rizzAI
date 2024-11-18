@@ -24,10 +24,17 @@
 # Getting Started
 
 **Prerequisites (MUST):**
+<<<<<<< HEAD
     
 -   [Python 2.7+](https://www.python.org/downloads/)
 -   [Node.js 22+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 -   [pnpm](https://pnpm.io/installation)
+=======
+
+- [Python 2.7+](https://www.python.org/downloads/)
+- [Node.js 23+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- [pnpm](https://pnpm.io/installation)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ### Edit the .env file
 

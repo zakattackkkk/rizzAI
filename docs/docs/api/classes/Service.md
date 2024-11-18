@@ -28,7 +28,11 @@
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:507](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L507)
+=======
+[packages/core/src/types.ts:507](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L507)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 ## Methods
 
@@ -38,7 +42,11 @@
 
 #### Type Parameters
 
+<<<<<<< HEAD
 • **T** *extends* [`Service`](Service.md)
+=======
+• **T** _extends_ [`Service`](Service.md)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2
 
 #### Returns
 
@@ -46,4 +54,8 @@
 
 #### Defined in
 
+<<<<<<< HEAD
 [packages/core/src/types.ts:509](https://github.com/8bitsats/eliza/blob/b6c06b96b915454d08a65f46cfdce8da763cbf85/packages/core/src/types.ts#L509)
+=======
+[packages/core/src/types.ts:509](https://github.com/ai16z/eliza/blob/7fcf54e7fb2ba027d110afcc319c0b01b3f181dc/packages/core/src/types.ts#L509)
+>>>>>>> 4b1caa00b77b5eb23e15d3adc3774fd4d6062fe2

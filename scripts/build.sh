@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Check Node.js version
+REQUIRED_NODE_VERSION=22
+CURRENT_NODE_VERSION=$(node -v | cut -d'.' -f1 | sed 's/v//')
+
+if (( CURRENT_NODE_VERSION < REQUIRED_NODE_VERSION )); then
+    echo "Error: Node.js version must be $REQUIRED_NODE_VERSION or higher. Current version is $CURRENT_NODE_VERSION."
+    exit 1
+fi
+
 # Navigate to the script's directory
 cd "$(dirname "$0")"/..
 
@@ -9,27 +18,50 @@ if [ ! -d "packages" ]; then
     exit 1
 fi
 
-# Iterate over each directory in the packages directory
-for package in packages/*; do
-    if [ -d "$package" ]; then
-        echo "Building package: $(basename "$package")"
-        cd "$package" || continue
+# Define packages to build in order
+PACKAGES=(
+    "core"
+    "plugin-trustdb"
+    "plugin-solana"
+    "plugin-starknet"
+    "adapter-postgres"
+    "adapter-sqlite"
+    "adapter-sqljs"
+    "adapter-supabase"
+    "client-auto"
+    "client-direct"
+    "client-discord"
+    "client-telegram"
+    "client-twitter"
+    "plugin-node"
+    "plugin-bootstrap"
+    "plugin-image-generation"
+)
 
-        # Check if a package.json file exists
-        if [ -f "package.json" ]; then
-            # Run the build script defined in package.json
-            if npm run build; then
-                echo "Successfully built $(basename "$package")"
-            else
-                echo "Failed to build $(basename "$package")"
-            fi
-        else
-            echo "No package.json found in $(basename "$package"), skipping..."
-        fi
-
-        # Return to the root directory
-        cd - > /dev/null || exit
+# Build packages in specified order
+for package in "${PACKAGES[@]}"; do
+    package_path="packages/$package"
+    
+    if [ ! -d "$package_path" ]; then
+        echo -e "\033[1mPackage directory '$package' not found, skipping...\033[0m"
+        continue
     fi
+
+    echo -e "\033[1mBuilding package: $package\033[0m"
+    cd "$package_path" || continue
+
+    if [ -f "package.json" ]; then
+        if npm run build; then
+            echo -e "\033[1;32mSuccessfully built $package\033[0m\n"
+        else
+            echo -e "\033[1;31mFailed to build $package\033[0m"
+            exit 1
+        fi
+    else
+        echo "No package.json found in $package, skipping..."
+    fi
+
+    cd - > /dev/null || exit
 done
 
-echo "Build process completed."
+echo -e "\033[1mBuild process completed.😎\033[0m"

@@ -4,6 +4,14 @@
 
 ### [For Chinese Version: 中文说明](./README_CN.md)
 
+### [For Japanese Version: 日本語の説明](./README_JA.md)
+
+### [For Korean Version: 한국어 설명](./README_KOR.md)
+
+### [For French Version: Instructions en français](./README_FR.md)
+
+### [For Portuguese Version: Instruções em português](./README_PTBR.md)
+
 ## Features
 
 -   🛠 Full-featured Discord, Twitter and Telegram connectors
@@ -24,9 +32,9 @@
 # Getting Started
 
 **Prerequisites (MUST):**
-    
+
 -   [Python 2.7+](https://www.python.org/downloads/)
--   [Node.js 22+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+-   [Node.js 23.1+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 -   [pnpm](https://pnpm.io/installation)
 
 ### Edit the .env file
@@ -156,7 +164,7 @@ For help with setting up your Discord Bot, check out here: https://discordjs.gui
 
 ## Testing
 
-To run the test suite:
+To run the test suite, you must got into each package:
 
 ```bash
 pnpm test           # Run tests once
@@ -178,3 +186,32 @@ Tests are written using Jest and can be found in `src/**/*.test.ts` files. The t
 -   Run tests in sequence (--runInBand)
 
 To create new tests, add a `.test.ts` file adjacent to the code you're testing.
+
+## Docker
+
+For development purposes, you can run the docker container with the following command:
+
+```
+pnpm docker
+```
+
+This will drop you into a shell inside the docker container where you can continue to configure the instance
+
+and then you can start it with `pnpm start`
+
+
+## Community & contact 
+
+* [GitHub Issues](https://github.com/ai16z/eliza/issues). Best for: bugs you encounter using Eliza, and feature proposals.
+* [Discord](https://discord.gg/ai16z). Best for: sharing your applications and hanging out with the community.
+
+
+**Contributors**
+
+<a href="https://github.com/ai16z/eliza/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ai16z/eliza" />
+</a>
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ai16z/eliza&type=Date)](https://star-history.com/#ai16z/eliza&Date)

@@ -8,6 +8,8 @@
         "@ai16z/eliza": "workspace:*",
         "@ai16z/plugin-image-generation": "workspace:*",
         "@ai16z/plugin-solana": "workspace:*",
+        "@ai16z/plugin-trustdb": "workspace:*",
+        "@solana/web3.js": "^1.91.0",
         "@types/body-parser": "1.19.5",
         "@types/cors": "2.8.17",
         "@types/express": "5.0.0",

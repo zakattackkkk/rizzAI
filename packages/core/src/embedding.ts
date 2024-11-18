@@ -1,7 +1,7 @@
 import { EmbeddingModel, FlagEmbedding } from "fastembed";
 import path from "path";
 import { fileURLToPath } from "url";
-import models from "./models.ts";
+import { models } from "./models.ts";
 import { IAgentRuntime, ModelProviderName, ModelClass } from "./types.ts";
 import fs from "fs";
 import { trimTokens } from "./generation.ts";
@@ -96,8 +96,6 @@ export async function embed(runtime: IAgentRuntime, input: string) {
     if (!embeddingModel) {
         throw new Error("No embedding model configured");
     }
-
-    console.log("embeddingModel", embeddingModel);
 
     // Try local embedding first
     if (

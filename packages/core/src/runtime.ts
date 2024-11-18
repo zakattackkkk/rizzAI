@@ -150,13 +150,13 @@ export class AgentRuntime implements IAgentRuntime {
         return this.memoryManagers.get(tableName) || null;
     }
 
-    getService<T>(service: ServiceType): T | null {
+    getService(service: ServiceType): typeof Service | null {
         const serviceInstance = this.services.get(service);
         if (!serviceInstance) {
             console.error(`Service ${service} not found`);
             return null;
         }
-        return serviceInstance as T;
+        return serviceInstance as typeof Service;
     }
     registerService(service: Service): void {
         const serviceType = (service as typeof Service).serviceType;
@@ -345,11 +345,7 @@ export class AgentRuntime implements IAgentRuntime {
                         text: knowledgeItem,
                     },
                 });
-                const fragments = await splitChunks(
-                    knowledgeItem,
-                    1200,
-                    200
-                );
+                const fragments = await splitChunks(knowledgeItem, 1200, 200);
                 for (const fragment of fragments) {
                     const embedding = await embed(this, fragment);
                     await this.knowledgeManager.createMemory({
@@ -499,7 +495,6 @@ export class AgentRuntime implements IAgentRuntime {
      * @returns The results of the evaluation.
      */
     async evaluate(message: Memory, state?: State, didRespond?: boolean) {
-        console.log("Evaluate: ", didRespond);
         const evaluatorPromises = this.evaluators.map(
             async (evaluator: Evaluator) => {
                 console.log("Evaluating", evaluator.name);
@@ -894,27 +889,29 @@ Text: ${attachment.text}
                 .join(" ");
         }
 
-        async function getKnowledge(runtime: AgentRuntime, message: Memory): Promise<string[]> {
+        async function getKnowledge(
+            runtime: AgentRuntime,
+            message: Memory
+        ): Promise<string[]> {
             const embedding = await embed(runtime, message.content.text);
 
-            console.log("message.agentId", message.agentId)
+            const memories =
+                await runtime.knowledgeManager.searchMemoriesByEmbedding(
+                    embedding,
+                    {
+                        roomId: message.agentId,
+                        agentId: message.agentId,
+                        count: 3,
+                    }
+                );
 
-            const memories = await runtime.knowledgeManager.searchMemoriesByEmbedding(
-                embedding,
-                {
-                    roomId: message.agentId,
-                    agentId: message.agentId,
-                    count: 3,
-                }
-            );
-
-            const knowledge = memories.map(memory => memory.content.text);
+            const knowledge = memories.map((memory) => memory.content.text);
             return knowledge;
         }
 
         const formatKnowledge = (knowledge: string[]) => {
-            return knowledge.map(knowledge => `- ${knowledge}`).join("\n");
-        }
+            return knowledge.map((knowledge) => `- ${knowledge}`).join("\n");
+        };
 
         const formattedKnowledge = formatKnowledge(
             await getKnowledge(this, message)

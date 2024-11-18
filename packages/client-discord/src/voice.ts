@@ -20,9 +20,9 @@ import {
 import EventEmitter from "events";
 import prism from "prism-media";
 import { Readable, pipeline } from "stream";
-import { composeContext } from "@ai16z/eliza/src/context.ts";
-import { generateMessageResponse } from "@ai16z/eliza/src/generation.ts";
-import { embeddingZeroVector } from "@ai16z/eliza/src/memory.ts";
+import { composeContext } from "@ai16z/eliza";
+import { generateMessageResponse } from "@ai16z/eliza";
+import { embeddingZeroVector } from "@ai16z/eliza";
 import {
     Content,
     HandlerCallback,
@@ -31,10 +31,11 @@ import {
     ITranscriptionService,
     Memory,
     ModelClass,
+    Service,
     ServiceType,
     State,
     UUID,
-} from "@ai16z/eliza/src/types.ts";
+} from "@ai16z/eliza";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 
 export function getWavHeader(
@@ -399,9 +400,8 @@ export class VoiceManager extends EventEmitter {
 
                         console.log("starting transcription");
                         const text = await this.runtime
-                            .getService<ITranscriptionService>(
-                                ServiceType.TRANSCRIPTION
-                            )
+                            .getService(ServiceType.TRANSCRIPTION)
+                            .getInstance<ITranscriptionService>()
                             .transcribe(wavBuffer);
                         console.log("transcribed text: ", text);
                         transcriptionText += text;
@@ -541,9 +541,8 @@ export class VoiceManager extends EventEmitter {
                                         state
                                     );
                                 const responseStream = await this.runtime
-                                    .getService<ISpeechService>(
-                                        ServiceType.SPEECH_GENERATION
-                                    )
+                                    .getService(ServiceType.SPEECH_GENERATION)
+                                    .getInstance<ISpeechService>()
                                     .generate(this.runtime, content.text);
 
                                 if (responseStream) {

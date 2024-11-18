@@ -1,14 +1,17 @@
-import { Tweet } from "agent-twitter-client";
+import { Tweet } from "@ai16z/agent-twitter-client";
 import fs from "fs";
-import { composeContext } from "@ai16z/eliza/src/context.ts";
-import { generateText } from "@ai16z/eliza/src/generation.ts";
-import { embeddingZeroVector } from "@ai16z/eliza/src/memory.ts";
-import { IAgentRuntime, ModelClass } from "@ai16z/eliza/src/types.ts";
-import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
+import {
+    composeContext,
+    generateText,
+    embeddingZeroVector,
+    IAgentRuntime,
+    ModelClass,
+    stringToUuid
+} from "@ai16z/eliza";
 import { ClientBase } from "./base.ts";
 
 // Cheshire Cat Bot Settings
-const TWITTER_USERNAME = "your_twitter_username";
+const TWITTER_USERNAME = "iamsolgpt";
 const CHARACTER_NAME = "cheshire";
 const CHARACTER_TEMPLATE = `
 # Character: Cheshire - The Solana Degen Cat
