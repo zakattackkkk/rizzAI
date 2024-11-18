@@ -1,11 +1,13 @@
-import { embeddingZeroVector } from "@ai16z/eliza/src/memory.ts";
 import {
+    embeddingZeroVector,
     Content,
     IAgentRuntime,
     IImageDescriptionService,
     Memory,
     State,
     UUID,
+    elizaLogger,
+    stringToUuid
 } from "@ai16z/eliza";
 import {
     QueryTweetsResponse,
@@ -17,11 +19,7 @@ import { EventEmitter } from "events";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
 import { glob } from "glob";
-
-import { elizaLogger } from "@ai16z/eliza/src/logger.ts";
-import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
 
 export function extractAnswer(text: string): string {
     const startIndex = text.indexOf("Answer: ") + 8;
