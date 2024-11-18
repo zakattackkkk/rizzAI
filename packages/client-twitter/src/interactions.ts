@@ -94,7 +94,6 @@ export class TwitterInteractionClient extends ClientBase {
     }
 
     async handleTwitterInteractions() {
-        console.log("Checking Twitter interactions...");
         try {
             const tweets = await this.fetchSearchTweets(
                 `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
@@ -102,11 +101,6 @@ export class TwitterInteractionClient extends ClientBase {
                 SearchMode.Latest
             );
             const tweetCandidates = this.filterValidTweets(tweets.tweets);
-
-            console.log(
-                `Found ${tweetCandidates.length} valid tweet(s) to process.`
-            );
-
             const groupedTweets =
                 this.groupTweetsByConversation(tweetCandidates);
 
@@ -115,8 +109,6 @@ export class TwitterInteractionClient extends ClientBase {
             )) {
                 await this.handleConversation(conversationId, tweets);
             }
-
-            console.log("Finished processing Twitter interactions.");
         } catch (error) {
             console.error("Error while handling Twitter interactions:", error);
         }
@@ -143,7 +135,6 @@ export class TwitterInteractionClient extends ClientBase {
     }
 
     async handleConversation(conversationId: string, tweets: Tweet[]) {
-        console.log(`Processing conversation: ${conversationId}`);
         try {
             const roomId = stringToUuid(conversationId);
             for (const tweet of tweets) {
@@ -177,21 +168,17 @@ export class TwitterInteractionClient extends ClientBase {
 
     async handleTweet({ tweet, message }: { tweet: Tweet; message: Memory }) {
         if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
-            console.log("Skipping tweet from bot itself:", tweet.id);
             return;
         }
 
         if (!message.content.text) {
-            console.log("Skipping tweet with no text:", tweet.id);
             return;
         }
 
-        console.log("Handling tweet:", tweet.id);
         const context = await this.composeTweetContext(tweet, message);
 
         const shouldRespond = await this.evaluateShouldRespond(context);
         if (!shouldRespond) {
-            console.log("Decision: IGNORE tweet:", tweet.id);
             return;
         }
 
