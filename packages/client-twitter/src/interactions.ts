@@ -117,8 +117,12 @@ export class TwitterInteractionClient extends ClientBase {
     filterValidTweets(tweets: Tweet[]): Tweet[] {
         const seenIds = new Set();
         return tweets
-            .filter((tweet) => tweet.userId !== this.twitterUserId) // Exclude bot's tweets
-            .filter((tweet) => tweet.text && !seenIds.has(tweet.id)) // Exclude empty or duplicate tweets
+            .filter(
+                (tweet) =>
+                    tweet.userId !== this.twitterUserId && // Exclude bot's tweets
+                    tweet.text && // Exclude empty tweets
+                    !seenIds.has(tweet.id) // Exclude duplicate tweets
+            )
             .map((tweet) => {
                 seenIds.add(tweet.id);
                 return tweet;
