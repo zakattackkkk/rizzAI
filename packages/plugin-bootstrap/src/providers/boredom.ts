@@ -334,7 +334,7 @@ const boredomProvider: Provider = {
         const recentUsers = Array.from(recentUserActivity);
 
         // penalty for repetitive recent interactions
-        // probably change totalMessages value
+        // TODO (#408): change totalMessages value
         if (recentUsers.length <= 2 && recentMessages.length > 10) {
             boredomScore += 1;
         }
@@ -346,7 +346,7 @@ const boredomProvider: Provider = {
                 0
             );
 
-            // probably change totalMessages value
+            // TODO (#408): change totalMessages value
             if (totalMessages > 10) {
                 boredomScore += 1;
             }
