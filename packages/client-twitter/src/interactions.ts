@@ -44,11 +44,19 @@ Recent interactions between {{agentName}} and other users:
 Current Post:
 {{currentPost}}
 Thread of Tweets You Are Replying To:
+<<<<<<< main
 
 {{formattedConversation}}
 
 {{actions}}
 
+=======
+
+{{formattedConversation}}
+
+{{actions}}
+
+>>>>>>> main
 # Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}). Include an action, if appropriate. {{actionNames}}:
 {{currentPost}}
 ` + messageCompletionFooter;
@@ -204,7 +212,7 @@ export class TwitterInteractionClient extends ClientBase {
         tweet: Tweet;
         message: Memory;
         thread: Tweet[];
-    }): Promise<Tweet[]> {
+    }) {
         if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
             // console.log("skipping tweet from bot itself", tweet.id);
             // Skip processing if the tweet is from the bot itself
@@ -321,7 +329,7 @@ export class TwitterInteractionClient extends ClientBase {
         // Promise<"RESPOND" | "IGNORE" | "STOP" | null> {
         if (shouldRespond !== "RESPOND") {
             elizaLogger.log("Not responding to message");
-            return [];
+            return { text: "Response Decision:", action: shouldRespond };
         }
 
         const context = composeContext({
@@ -400,6 +408,19 @@ export class TwitterInteractionClient extends ClientBase {
                 elizaLogger.error(`Error sending response tweet: ${error}`);
             }
         }
+
+        // Need to bind this context for the inner function
+        await processThread.bind(this)(tweet, 0);
+
+        elizaLogger.debug("Final thread built:", {
+            totalTweets: thread.length,
+            tweetIds: thread.map((t) => ({
+                id: t.id,
+                text: t.text?.slice(0, 50),
+            })),
+        });
+
+        return thread;
     }
 
     async buildConversationThread(
