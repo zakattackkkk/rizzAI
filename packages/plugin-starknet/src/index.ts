@@ -1,4 +1,5 @@
 import { Plugin } from "@ai16z/eliza";
+import { placeBuilding } from "./actions/placeBuilding";
 import { executeSwap } from "./actions/swap";
 import transfer from "./actions/transfer";
 
@@ -20,7 +21,7 @@ export const PROVIDER_CONFIG = {
 export const starknetPlugin: Plugin = {
     name: "starknet",
     description: "Starknet Plugin for Eliza",
-    actions: [transfer, executeSwap],
+    actions: [transfer, executeSwap, placeBuilding],
     evaluators: [],
     providers: [],
 };

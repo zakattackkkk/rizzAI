@@ -1,22 +1,22 @@
 import { PostgresDatabaseAdapter } from "@ai16z/adapter-postgres";
 import { SqliteDatabaseAdapter } from "@ai16z/adapter-sqlite";
+import { AutoClientInterface } from "@ai16z/client-auto";
 import { DirectClientInterface } from "@ai16z/client-direct";
 import { DiscordClientInterface } from "@ai16z/client-discord";
-import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
-import { defaultCharacter } from "@ai16z/eliza";
-import { AgentRuntime } from "@ai16z/eliza";
-import { settings } from "@ai16z/eliza";
 import {
+    AgentRuntime,
     Character,
+    defaultCharacter,
     IAgentRuntime,
-    IDatabaseAdapter,
     ModelProviderName,
+    settings,
 } from "@ai16z/eliza";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
-import { solanaPlugin } from "@ai16z/plugin-solana";
 import { nodePlugin } from "@ai16z/plugin-node";
+import { solanaPlugin } from "@ai16z/plugin-solana";
+import starknetPlugin from "@ai16z/plugin-starknet";
 import Database from "better-sqlite3";
 import fs from "fs";
 import readline from "readline";
@@ -224,10 +224,11 @@ export async function createAgent(
         plugins: [
             bootstrapPlugin,
             nodePlugin,
+            starknetPlugin,
             character.settings.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
         ].filter(Boolean),
         providers: [],
-        actions: [],
+        actions: [starknetPlugin.actions[2]],
         services: [],
         managers: [],
     });
