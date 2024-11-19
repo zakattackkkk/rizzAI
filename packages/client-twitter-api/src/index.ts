@@ -17,7 +17,7 @@ class TwitterAllClient {
     }
 }
 
-export const TwitterClientInterface: Client = {
+export const TwitterAPIClientInterface: Client = {
     async start(runtime: IAgentRuntime) {
         console.log("Twitter client started");
         return new TwitterAllClient(runtime);

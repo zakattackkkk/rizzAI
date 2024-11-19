@@ -11,6 +11,7 @@
         "twitter-api-v2": "^1.18.2"
     },
     "devDependencies": {
+        "@ai16z/eliza": "workspace:*",
         "tsup": "^8.3.5"
     },
     "scripts": {

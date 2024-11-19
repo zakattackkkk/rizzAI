@@ -119,6 +119,8 @@ export enum SearchMode {
 };
 
 export class ClientBase extends EventEmitter {
+    protected isReady: boolean = false;
+    protected readyPromise: Promise<void>;
     static _twitterClient: TwitterApi;
     twitterClient: TwitterApi;
     runtime: IAgentRuntime;
@@ -137,6 +139,15 @@ export class ClientBase extends EventEmitter {
         throw new Error(
             "Not implemented in base class, please call from subclass"
         );
+    }
+
+    protected async ensureReady(): Promise<void> {
+        if (!this.isReady) {
+            await this.readyPromise;
+        }
+        if (!this.twitterUsername || !this.twitterUserId) {
+            throw new Error('Twitter client not properly initialized');
+        }
     }
 
     protected async getAuthenticatedUserInfo() {
@@ -239,6 +250,7 @@ export class ClientBase extends EventEmitter {
     }
 
     async getTweet(tweetId: string): Promise<Tweet> {
+        await this.ensureReady();
         const cachedTweet = await this.getCachedTweet(tweetId);
         if (cachedTweet) {
             return cachedTweet;
@@ -246,7 +258,32 @@ export class ClientBase extends EventEmitter {
     
         const result = await this.executeWithTokenRefresh(async () => {
             //const tweetResult = await this.twitterClient.v2.get(`tweets/${tweetId}`);
-            const tweetResult = await this.twitterClient.v2.singleTweet(tweetId);
+            const tweetResult = await this.twitterClient.v2.singleTweet(tweetId,
+                {
+                    "tweet.fields": [
+                        "created_at",
+                        "conversation_id",
+                        "in_reply_to_user_id",
+                        "entities",
+                        "attachments",
+                        "referenced_tweets",
+                        "text"
+                    ],
+                    "user.fields": ["name", "username"],
+                    "expansions": [
+                        "author_id",
+                        "attachments.media_keys",
+                        "referenced_tweets.id",
+                        "entities.mentions.username"
+                    ],
+                    "media.fields": [
+                        "url",
+                        "type",
+                        "preview_image_url",
+                        "alt_text"
+                    ]
+                }
+            );
             const tweet: Tweet = {
                 id: tweetResult.data.id,
                 text: tweetResult.data.text,
@@ -255,8 +292,8 @@ export class ClientBase extends EventEmitter {
                 userId: tweetResult.data.author_id,
                 inReplyToStatusId: tweetResult.data.in_reply_to_user_id,
                 permanentUrl: `https://twitter.com/i/web/status/${tweetResult.data.id}`,
-                username: tweetResult.includes?.users?.[0]?.username,
-                name: tweetResult.includes?.users?.[0]?.name,
+                username: tweetResult.includes?.users?.find(user => user.id === tweetResult.data.author_id).username,
+                name: tweetResult.includes?.users?.find(user => user.id === tweetResult.data.author_id).name,
                 hashtags: tweetResult.data.entities.hashtags,
                 mentions: tweetResult.data.entities.mentions,
                 photos: [],
@@ -326,6 +363,8 @@ export class ClientBase extends EventEmitter {
         }
 
         // async initialization
+        // Define readyPromise with its resolver
+        this.readyPromise = new Promise<void>((resolve, reject) => {
         (async () => {
             // initiate twitter client
             try {
@@ -334,12 +373,13 @@ export class ClientBase extends EventEmitter {
                     this.twitterUserId = me.data.id;
                     console.log("Twitter user ID:", this.twitterUserId);
                     this.twitterUsername = me.data.username;
+                    console.log("Twitter user Name:", this.twitterUsername);
 
                 });
                 
                 const profile = await this.initializeProfile();
                 if (profile) {
-                    // console.log("Twitter profile initialized:", profile);
+                    console.log("Twitter profile initialized:", profile);
 
                     // Store profile info for use in responses
                     this.runtime.character = {
@@ -354,106 +394,134 @@ export class ClientBase extends EventEmitter {
                 }
 
                 await this.populateTimeline();
-
+                this.isReady = true;
+                resolve();
                 this.onReady();
-                } catch (error) {
+            } catch (error) {
                 console.error("Error initializing Twitter client:", error);
-            }
-
-                
-        })();
+                reject(error);
+            }   
+            })();
+        });
     }
 
     async fetchHomeTimeline(count: number): Promise<Tweet[]> {
-        const homeTimeline = await this.twitterClient.fetchHomeTimeline(
-            count,
-            []
-        );
-
-        return homeTimeline
-            .filter((t) => t.__typename !== "TweetWithVisibilityResults")
-            .map((tweet) => {
-                console.log("tweet is", tweet);
-                const obj = {
-                    id: tweet.rest_id,
-                    name:
-                        tweet.name ??
-                        tweet.core?.user_results?.result?.legacy.name,
-                    username:
-                        tweet.username ??
-                        tweet.core?.user_results?.result?.legacy.screen_name,
-                    text: tweet.text ?? tweet.legacy?.full_text,
-                    inReplyToStatusId:
-                        tweet.inReplyToStatusId ??
-                        tweet.legacy?.in_reply_to_status_id_str,
-                    createdAt: tweet.createdAt ?? tweet.legacy?.created_at,
-                    userId: tweet.userId ?? tweet.legacy?.user_id_str,
-                    conversationId:
-                        tweet.conversationId ??
-                        tweet.legacy?.conversation_id_str,
-                    hashtags: tweet.hashtags ?? tweet.legacy?.entities.hashtags,
-                    mentions:
-                        tweet.mentions ?? tweet.legacy?.entities.user_mentions,
-                    photos:
-                        tweet.photos ??
-                        tweet.legacy?.entities.media?.filter(
-                            (media) => media.type === "photo"
-                        ) ??
-                        [],
-                    thread: [],
-                    urls: tweet.urls ?? tweet.legacy?.entities.urls,
-                    videos:
-                        tweet.videos ??
-                        tweet.legacy?.entities.media?.filter(
-                            (media) => media.type === "video"
-                        ) ??
-                        [],
-                };
-
-                console.log("obj is", obj);
-
-                return obj;
+        await this.ensureReady();
+        return await this.executeWithTokenRefresh(async () => {
+            // Use v1 API for home timeline as recommended
+            const homeTimeline = await this.twitterClient.v1.homeTimeline({
+                count,
+                tweet_mode: 'extended'
             });
+
+            return homeTimeline.tweets.map(tweet => ({
+                id: tweet.id_str,
+                text: tweet.full_text || tweet.text,
+                conversationId: tweet.id_str,
+                createdAt: tweet.created_at,
+                userId: tweet.user.id_str,
+                inReplyToStatusId: tweet.in_reply_to_status_id_str,
+                permanentUrl: `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}`,
+                username: tweet.user.screen_name,
+                name: tweet.user.name,
+                hashtags: tweet.entities.hashtags || [],
+                mentions: tweet.entities.user_mentions || [],
+                photos: tweet.entities.media?.filter(media => media.type === 'photo') || [],
+
+                thread: [
+                ...(tweet.in_reply_to_status_id_str ? [{
+                    type: 'reply' as const,
+                    tweet: null as any // Will be populated later if needed
+                }] : []),
+                ...(tweet.retweeted_status ? [{
+                    type: 'retweet' as const,
+                    tweet: {
+                        id: tweet.retweeted_status.id_str,
+                        text: tweet.retweeted_status.full_text || tweet.retweeted_status.text,
+                        conversationId: tweet.retweeted_status.id_str,
+                        createdAt: tweet.retweeted_status.created_at,
+                        userId: tweet.retweeted_status.user.id_str,
+                        permanentUrl: `https://twitter.com/${tweet.retweeted_status.user.screen_name}/status/${tweet.retweeted_status.id_str}`,
+                        username: tweet.retweeted_status.user.screen_name,
+                        name: tweet.retweeted_status.user.name,
+                        hashtags: tweet.retweeted_status.entities.hashtags || [],
+                        mentions: tweet.retweeted_status.entities.user_mentions || [],
+                        photos: tweet.retweeted_status.entities.media?.filter(media => media.type === 'photo') || [],
+                        thread: [],
+                        urls: tweet.retweeted_status.entities.urls?.map(url => url.expanded_url) || [],
+                        videos: tweet.retweeted_status.entities.media?.filter(media => media.type === 'video') || [],
+                        timestamp: new Date(tweet.retweeted_status.created_at).getTime() / 1000
+                    }
+                }] : []),
+                ...(tweet.quoted_status ? [{
+                    type: 'quote' as const,
+                    tweet: {
+                        id: tweet.quoted_status.id_str,
+                        text: tweet.quoted_status.full_text || tweet.quoted_status.text,
+                        conversationId: tweet.quoted_status.id_str,
+                        createdAt: tweet.quoted_status.created_at,
+                        userId: tweet.quoted_status.user.id_str,
+                        permanentUrl: `https://twitter.com/${tweet.quoted_status.user.screen_name}/status/${tweet.quoted_status.id_str}`,
+                        username: tweet.quoted_status.user.screen_name,
+                        name: tweet.quoted_status.user.name,
+                        hashtags: tweet.quoted_status.entities.hashtags || [],
+                        mentions: tweet.quoted_status.entities.user_mentions || [],
+                        photos: tweet.quoted_status.entities.media?.filter(media => media.type === 'photo') || [],
+                        thread: [],
+                        urls: tweet.quoted_status.entities.urls?.map(url => url.expanded_url) || [],
+                        videos: tweet.quoted_status.entities.media?.filter(media => media.type === 'video') || [],
+                        timestamp: new Date(tweet.quoted_status.created_at).getTime() / 1000
+                    }
+                }] : [])
+            ],
+                
+                urls: tweet.entities.urls?.map(url => url.expanded_url) || [],
+                videos: tweet.entities.media?.filter(media => media.type === 'video') || [],
+                timestamp: tweet.created_at ? new Date(tweet.created_at).getTime() / 1000 : Date.now() / 1000
+            }));
+        });
     }
 
     async fetchSearchTweets(
         query: string,
         maxTweets: number,
-        searchMode: SearchMode,
-        cursor?: string
-    ): Promise<QueryTweetsResponse> {
-        try {
-            // Sometimes this fails because we are rate limited. in this case, we just need to return an empty array
-            // if we dont get a response in 5 seconds, something is wrong
-            const timeoutPromise = new Promise((resolve) =>
-                setTimeout(() => resolve({ tweets: [] }), 10000)
-            );
+        searchMode: SearchMode
+    ): Promise<{tweets: Tweet[]}> {
+        await this.ensureReady();
+        return await this.executeWithTokenRefresh(async () => {
+            const searchResults = await this.twitterClient.v2.search({
+                query,
+                max_results: maxTweets,
+                "tweet.fields": ['created_at', 'conversation_id', 'in_reply_to_user_id'],
+                "user.fields": ['name', 'username'],
+                "expansions": ['author_id', 'referenced_tweets.id']
+            });
 
-            try {
-                const result = await this.requestQueue.add(
-                    async () =>
-                        await Promise.race([
-                            this.twitterClient.fetchSearchTweets(
-                                query,
-                                maxTweets,
-                                searchMode,
-                                cursor
-                            ),
-                            timeoutPromise,
-                        ])
-                );
-                return (result ?? { tweets: [] }) as QueryTweetsResponse;
-            } catch (error) {
-                console.error("Error fetching search tweets:", error);
-                return { tweets: [] };
-            }
-        } catch (error) {
-            console.error("Error fetching search tweets:", error);
-            return { tweets: [] };
-        }
+            const tweets = Array.from(searchResults).map(tweet => ({
+                id: tweet.id,
+                text: tweet.text,
+                conversationId: tweet.conversation_id || tweet.id,
+                createdAt: tweet.created_at || new Date().toISOString(),
+                userId: tweet.author_id || '',
+                inReplyToStatusId: tweet.in_reply_to_user_id,
+                permanentUrl: `https://twitter.com/i/web/status/${tweet.id}`,
+                username: searchResults.includes?.users?.find(u => u.id === tweet.author_id)?.username,
+                name: searchResults.includes?.users?.find(u => u.id === tweet.author_id)?.name,
+                hashtags: [],
+                mentions: [],
+                photos: [],
+                thread: [],
+                urls: [],
+                videos: [],
+                timestamp: tweet.created_at ? new Date(tweet.created_at).getTime() / 1000 : Date.now() / 1000
+            }));
+
+            return { tweets };
+        });
     }
 
     private async populateTimeline() {
+        await this.ensureReady();
         const cacheFile = "timeline_cache.json";
 
         // Check if the cache file exists
@@ -647,17 +715,17 @@ export class ClientBase extends EventEmitter {
         fs.writeFileSync(cacheFile, JSON.stringify(allTweets));
     }
 
-    async setCookiesFromArray(cookiesArray: any[]) {
-        const cookieStrings = cookiesArray.map(
-            (cookie) =>
-                `${cookie.key}=${cookie.value}; Domain=${cookie.domain}; Path=${cookie.path}; ${
-                    cookie.secure ? "Secure" : ""
-                }; ${cookie.httpOnly ? "HttpOnly" : ""}; SameSite=${
-                    cookie.sameSite || "Lax"
-                }`
-        );
-        await this.twitterClient.setCookies(cookieStrings);
-    }
+    // async setCookiesFromArray(cookiesArray: any[]) {
+    //     const cookieStrings = cookiesArray.map(
+    //         (cookie) =>
+    //             `${cookie.key}=${cookie.value}; Domain=${cookie.domain}; Path=${cookie.path}; ${
+    //                 cookie.secure ? "Secure" : ""
+    //             }; ${cookie.httpOnly ? "HttpOnly" : ""}; SameSite=${
+    //                 cookie.sameSite || "Lax"
+    //             }`
+    //     );
+        
+    // }
 
     async saveRequestMessage(message: Memory, state: State) {
         if (message.content.text) {
@@ -690,7 +758,7 @@ export class ClientBase extends EventEmitter {
     }
 
     async initializeProfile() {
-        const { username } = await this.getAuthenticatedUserInfo();
+        const username = this.twitterUsername;
         if (!username) {
             console.error("Twitter username not configured");
             return;

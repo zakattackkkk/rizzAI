@@ -1,4 +1,5 @@
-import { SearchMode, Tweet } from "agent-twitter-client";
+// packages/client-twitter-api/src/interactions.ts
+import { Tweet, ClientBase, SearchMode } from "./base.js";
 import fs from "fs";
 import { composeContext, elizaLogger } from "@ai16z/eliza";
 import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
@@ -12,7 +13,6 @@ import {
     State,
 } from "@ai16z/eliza";
 import { stringToUuid } from "@ai16z/eliza";
-import { ClientBase } from "./base.ts";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
 
 export const twitterMessageHandlerTemplate =
@@ -86,12 +86,13 @@ export class TwitterInteractionClient extends ClientBase {
     }
 
     async handleTwitterInteractions() {
+        await this.ensureReady();
         console.log("Checking Twitter interactions");
         try {
             // Check for mentions
             const tweetCandidates = (
                 await this.fetchSearchTweets(
-                    `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
+                    `@${this.twitterUsername}`,
                     20,
                     SearchMode.Latest
                 )
@@ -189,7 +190,8 @@ export class TwitterInteractionClient extends ClientBase {
         tweet: Tweet;
         message: Memory;
     }) {
-        if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
+        await this.ensureReady();
+        if (tweet.username === this.twitterUsername) {
             // console.log("skipping tweet from bot itself", tweet.id);
             // Skip processing if the tweet is from the bot itself
             return;
@@ -231,7 +233,7 @@ export class TwitterInteractionClient extends ClientBase {
 
         let state = await this.runtime.composeState(message, {
             twitterClient: this.twitterClient,
-            twitterUserName: this.runtime.getSetting("TWITTER_USERNAME"),
+            twitterUserName: this.twitterUsername,
             currentPost,
             timeline: formattedHomeTimeline,
         });
@@ -309,11 +311,12 @@ export class TwitterInteractionClient extends ClientBase {
         if (response.text) {
             try {
                 const callback: HandlerCallback = async (response: Content) => {
+                    // send the tweet here
                     const memories = await sendTweet(
                         this,
                         response,
                         message.roomId,
-                        this.runtime.getSetting("TWITTER_USERNAME"),
+                        this.twitterUsername,
                         tweet.id
                     );
                     return memories;
