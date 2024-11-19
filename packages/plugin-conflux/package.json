@@ -1,0 +1,13 @@
+{
+  "name": "@ai16z/plugin-conflux",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "js-conflux-sdk": "^2.4.11"
+  },
+  "scripts": {
+      "build": "tsup --format esm --dts"
+  }
+}
