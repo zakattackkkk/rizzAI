@@ -1,11 +1,10 @@
-import { Tweet } from "agent-twitter-client";
+import { Tweet, ClientBase } from "./base.ts";  // Using our own tweet
 import fs from "fs";
 import { composeContext } from "@ai16z/eliza";
 import { generateText } from "@ai16z/eliza";
 import { embeddingZeroVector } from "@ai16z/eliza";
 import { IAgentRuntime, ModelClass } from "@ai16z/eliza";
 import { stringToUuid } from "@ai16z/eliza";
-import { ClientBase } from "./base.ts";
 
 const twitterPostTemplate = `{{timeline}}
 
@@ -92,11 +91,12 @@ export class TwitterPostClient extends ClientBase {
     }
 
     private async generateNewTweet() {
+        await this.ensureReady();
         console.log("Generating new tweet");
         try {
             await this.runtime.ensureUserExists(
                 this.runtime.agentId,
-                this.runtime.getSetting("TWITTER_USERNAME"),
+                this.twitterUsername,
                 this.runtime.character.name,
                 "twitter"
             );
@@ -133,7 +133,7 @@ export class TwitterPostClient extends ClientBase {
                 },
                 {
                     twitterUserName:
-                        this.runtime.getSetting("TWITTER_USERNAME"),
+                        this.twitterUsername,
                     timeline: formattedHomeTimeline,
                 }
             );
@@ -160,28 +160,57 @@ export class TwitterPostClient extends ClientBase {
             const content = truncateToCompleteSentence(formattedTweet);
 
             try {
-                const result = await this.requestQueue.add(
-                    async () => await this.twitterClient.sendTweet(content)
+                const tweetResponse = await this.requestQueue.add(
+                    async () => await this.twitterClient.v2.tweet(content)
                 );
-                const body = await result.json();
-                const tweetResult = body.data.create_tweet.tweet_results.result;
+                if (!tweetResponse.data) {
+                    throw new Error("Failed to create tweet");
+                }
 
-                const tweet = {
-                    id: tweetResult.rest_id,
-                    text: tweetResult.legacy.full_text,
-                    conversationId: tweetResult.legacy.conversation_id_str,
-                    createdAt: tweetResult.legacy.created_at,
-                    userId: tweetResult.legacy.user_id_str,
-                    inReplyToStatusId:
-                        tweetResult.legacy.in_reply_to_status_id_str,
-                    permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
+                const tweetDetails = await this.twitterClient.v2.singleTweet( tweetResponse.data.id,
+                    {
+                        "tweet.fields": [
+                            "created_at",
+                            "conversation_id",
+                            "in_reply_to_user_id",
+                            "entities",
+                            "attachments",
+                            "referenced_tweets",
+                            "text"
+                        ],
+                        "user.fields": ["name", "username"],
+                        "expansions": [
+                            "author_id",
+                            "attachments.media_keys",
+                            "referenced_tweets.id",
+                            "entities.mentions.username"
+                        ],
+                        "media.fields": [
+                            "url",
+                            "type",
+                            "preview_image_url",
+                            "alt_text"
+                        ]
+                    }
+                );
+
+                const tweet: Tweet = {
+                    id: tweetDetails.data.id,
+                    text: content,
+                    conversationId: tweetDetails.data.conversation_id || tweetResponse.data.id,
+                    createdAt: tweetDetails.data.created_at || new Date().toISOString(),
+                    userId: this.twitterUserId,
+                    permanentUrl: `https://twitter.com/${this.twitterUsername}/status/${tweetDetails.data.id}`,
+                    username: tweetDetails.includes?.users?.find(user => user.id === tweetDetails.data.author_id).username,
+                    name: tweetDetails.includes?.users?.find(user => user.id === tweetDetails.data.author_id).name,
                     hashtags: [],
                     mentions: [],
                     photos: [],
                     thread: [],
                     urls: [],
                     videos: [],
-                } as Tweet;
+                    timestamp: Date.now()
+                };
 
                 const postId = tweet.id;
                 const conversationId =

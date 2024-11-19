@@ -5,6 +5,7 @@ import { DiscordClientInterface } from "@ai16z/client-discord";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
+import { TwitterAPIClientInterface } from "@ai16z/client-twitter-api";
 import { defaultCharacter } from "@ai16z/eliza";
 import { AgentRuntime } from "@ai16z/eliza";
 import { settings } from "@ai16z/eliza";
@@ -194,6 +195,11 @@ export async function initializeClients(
     if (clientTypes.includes("twitter")) {
         const twitterClients = await TwitterClientInterface.start(runtime);
         clients.push(twitterClients);
+    }
+
+    if (clientTypes.includes("twitter-api")) {
+        const twitterAPIClients = await TwitterAPIClientInterface.start(runtime);
+        clients.push(twitterAPIClients);
     }
 
     if (character.plugins?.length > 0) {
