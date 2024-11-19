@@ -44,19 +44,11 @@ Recent interactions between {{agentName}} and other users:
 Current Post:
 {{currentPost}}
 Thread of Tweets You Are Replying To:
-<<<<<<< main
 
 {{formattedConversation}}
 
 {{actions}}
 
-=======
-
-{{formattedConversation}}
-
-{{actions}}
-
->>>>>>> main
 # Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}). Include an action, if appropriate. {{actionNames}}:
 {{currentPost}}
 ` + messageCompletionFooter;
@@ -173,7 +165,47 @@ export class TwitterInteractionClient extends ClientBase {
                     tweet.username,
                     tweet.name,
                     "twitter"
+                    await this.handleTweet({
+                        tweet,
+                        message,
+                        thread,
+                    });
+
+                    // Update the last checked tweet ID after processing each tweet
+                    this.lastCheckedTweetId = parseInt(tweet.id);
+
+                    try {
+                        if (this.lastCheckedTweetId) {
+                            fs.writeFileSync(
+                                this.tweetCacheFilePath,
+                                this.lastCheckedTweetId.toString(),
+                                "utf-8"
+                            );
+                        }
+                    } catch (error) {
+                        elizaLogger.error(
+                            "Error saving latest checked tweet ID to file:",
+                            error
+                        );
+                    }
+                }
+            }
+
+            // Save the latest checked tweet ID to the file
+            try {
+                if (this.lastCheckedTweetId) {
+                    fs.writeFileSync(
+                        this.tweetCacheFilePath,
+                        this.lastCheckedTweetId.toString(),
+                        "utf-8"
+                    );
+                }
+            } catch (error) {
+                elizaLogger.error(
+                    "Error saving latest checked tweet ID to file:",
+                    error
                 );
+
 
                 const thread = await buildConversationThread(tweet, this);
 
@@ -192,6 +224,9 @@ export class TwitterInteractionClient extends ClientBase {
                 `Error processing conversation ${conversationId}:`,
                 error
             );
+            elizaLogger.log("Finished checking Twitter interactions");
+        } catch (error) {
+            elizaLogger.error("Error handling Twitter interactions:", error);
         }
     }
 
