@@ -11,6 +11,19 @@
             "runtimeExecutable": "pnpm",
             "runtimeArgs": ["run", "dev"],
             "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "type": "node", 
+            "request": "launch",
+            "name": "Launch via pnpm for debugging",
+            "runtimeExecutable": "/usr/bin/env",
+            "runtimeArgs": [
+                "pnpm",
+                "run",
+                "dev"
+            ],
+            "skipFiles": ["<node_internals>/**"],
+            "console": "integratedTerminal"
         }
     ]
 }
