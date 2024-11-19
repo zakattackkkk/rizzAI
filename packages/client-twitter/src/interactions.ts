@@ -1,14 +1,8 @@
 import { SearchMode, Tweet } from "agent-twitter-client";
 import fs from "fs";
-import { composeContext } from "@ai16z/eliza/src/context.ts";
-import {
-    generateMessageResponse,
-    generateShouldRespond,
-} from "@ai16z/eliza/src/generation.ts";
-import {
-    messageCompletionFooter,
-    shouldRespondFooter,
-} from "@ai16z/eliza/src/parsing.ts";
+import { composeContext, elizaLogger } from "@ai16z/eliza";
+import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
+import { messageCompletionFooter, shouldRespondFooter } from "@ai16z/eliza";
 import {
     Content,
     HandlerCallback,
@@ -17,9 +11,10 @@ import {
     ModelClass,
     State,
 } from "@ai16z/eliza";
-import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
+import { stringToUuid } from "@ai16z/eliza";
 import { ClientBase } from "./base.ts";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
+import { embeddingZeroVector } from "@ai16z/eliza";
 
 export const twitterMessageHandlerTemplate =
     `{{timeline}}
@@ -44,15 +39,24 @@ Recent interactions between {{agentName}} and other users:
 
 {{recentPosts}}
 
-# Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
-{{currentPost}}
 
+# Task: Generate a post/reply in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}) while using the thread of tweets as additional context:
+Current Post:
+{{currentPost}}
+Thread of Tweets You Are Replying To:
+
+{{formattedConversation}}
+
+{{actions}}
+
+# Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}). Include an action, if appropriate. {{actionNames}}:
+{{currentPost}}
 ` + messageCompletionFooter;
 
 export const twitterShouldRespondTemplate =
     `# INSTRUCTIONS: Determine if {{agentName}} (@{{twitterUserName}}) should respond to the message and participate in the conversation. Do not comment. Just respond with "true" or "false".
 
-Response options are RESPOND, IGNORE and STOP.
+Response options are RESPOND, IGNORE and STOP .
 
 {{agentName}} should respond to messages that are directed at them, or participate in conversations that are interesting or relevant to their background, IGNORE messages that are irrelevant to them, and should STOP if the conversation is concluded.
 
@@ -68,6 +72,10 @@ If {{agentName}} concludes a conversation and isn't part of the conversation any
 IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
 
 {{currentPost}}
+
+Thread of Tweets You Are Replying To:
+
+{{formattedConversation}}
 
 # INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation.
 ` + shouldRespondFooter;
@@ -90,17 +98,24 @@ export class TwitterInteractionClient extends ClientBase {
     }
 
     constructor(runtime: IAgentRuntime) {
-        super({ runtime });
+        super({
+            runtime,
+        });
     }
 
     async handleTwitterInteractions() {
+        elizaLogger.log("Checking Twitter interactions");
         try {
-            const tweets = await this.fetchSearchTweets(
-                `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
-                20,
-                SearchMode.Latest
-            );
-            const tweetCandidates = this.filterValidTweets(tweets.tweets);
+            // Check for mentions
+            const tweets = (
+                await this.fetchSearchTweets(
+                    `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
+                    20,
+                    SearchMode.Latest
+                )
+            ).tweets;
+
+            const tweetCandidates = this.filterValidTweets(tweets);
             const groupedTweets =
                 this.groupTweetsByConversation(tweetCandidates);
 
@@ -152,6 +167,8 @@ export class TwitterInteractionClient extends ClientBase {
                     "twitter"
                 );
 
+                const thread = await buildConversationThread(tweet, this);
+
                 const message = {
                     content: { text: tweet.text },
                     agentId: this.runtime.agentId,
@@ -159,131 +176,14 @@ export class TwitterInteractionClient extends ClientBase {
                     roomId,
                 };
 
-                await this.handleTweet({ tweet, message });
+                await this.handleTweet({ tweet, message, thread });
                 this.updateLastCheckedTweetId(tweet.id);
             }
         } catch (error) {
-            console.error(
+            elizaLogger.error(
                 `Error processing conversation ${conversationId}:`,
                 error
             );
-        }
-    }
-
-    async handleTweet({ tweet, message }: { tweet: Tweet; message: Memory }) {
-        if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
-            return;
-        }
-
-        if (!message.content.text) {
-            return;
-        }
-
-        const context = await this.composeTweetContext(tweet, message);
-
-        const shouldRespond = await this.evaluateShouldRespond(context);
-        if (!shouldRespond) {
-            return;
-        }
-
-        const response = await this.generateResponse(context);
-        if (response?.text) {
-            await this.sendTweetResponse(tweet, response, message.roomId);
-        }
-    }
-
-    async composeTweetContext(tweet: Tweet, message: Memory): Promise<State> {
-        const formattedTimeline = await this.getFormattedTimeline();
-        const currentPost = this.formatTweet(tweet);
-
-        return this.runtime.composeState(message, {
-            twitterClient: this.twitterClient,
-            twitterUserName: this.runtime.getSetting("TWITTER_USERNAME"),
-            currentPost,
-            timeline: formattedTimeline,
-        });
-    }
-
-    async evaluateShouldRespond(context: State): Promise<boolean> {
-        const shouldRespondContext = composeContext({
-            state: context,
-            template:
-                this.runtime.character.templates
-                    ?.twitterShouldRespondTemplate ||
-                twitterShouldRespondTemplate,
-        });
-
-        const result = await generateShouldRespond({
-            runtime: this.runtime,
-            context: shouldRespondContext,
-            modelClass: ModelClass.SMALL,
-        });
-
-        return result === "RESPOND";
-    }
-
-    async generateResponse(context: State): Promise<Content> {
-        const responseContext = composeContext({
-            state: context,
-            template:
-                this.runtime.character.templates
-                    ?.twitterMessageHandlerTemplate ||
-                twitterMessageHandlerTemplate,
-        });
-
-        return await generateMessageResponse({
-            runtime: this.runtime,
-            context: responseContext,
-            modelClass: ModelClass.SMALL,
-        });
-    }
-
-    async sendTweetResponse(tweet: Tweet, response: Content, roomId: string) {
-        try {
-            const memories = await sendTweet(
-                this,
-                response,
-                roomId,
-                this.runtime.getSetting("TWITTER_USERNAME"),
-                tweet.id
-            );
-
-            for (const memory of memories) {
-                await this.runtime.messageManager.createMemory(memory);
-            }
-        } catch (error) {
-            console.error(
-                `Error sending tweet response to ${tweet.id}:`,
-                error
-            );
-        }
-    }
-
-    formatTweet(tweet: Tweet): string {
-        return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})\nText: ${tweet.text}`;
-    }
-
-    async getFormattedTimeline(): Promise<string> {
-        try {
-            let homeTimeline = [];
-            const cacheFile = "tweetcache/home_timeline.json";
-
-            if (fs.existsSync(cacheFile)) {
-                homeTimeline = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
-            } else {
-                homeTimeline = await this.fetchHomeTimeline(50);
-                fs.writeFileSync(
-                    cacheFile,
-                    JSON.stringify(homeTimeline, null, 2)
-                );
-            }
-
-            return homeTimeline
-                .map((tweet) => this.formatTweet(tweet))
-                .join("\n---\n");
-        } catch (error) {
-            console.error("Error fetching or formatting home timeline:", error);
-            return "Error loading timeline.";
         }
     }
 
@@ -294,5 +194,341 @@ export class TwitterInteractionClient extends ClientBase {
             this.lastCheckedTweetId.toString(),
             "utf-8"
         );
+    }
+
+    private async handleTweet({
+        tweet,
+        message,
+        thread,
+    }: {
+        tweet: Tweet;
+        message: Memory;
+        thread: Tweet[];
+    }): Promise<Tweet[]> {
+        if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
+            // console.log("skipping tweet from bot itself", tweet.id);
+            // Skip processing if the tweet is from the bot itself
+            return;
+        }
+
+        if (!message.content.text) {
+            elizaLogger.log("skipping tweet with no text", tweet.id);
+            return { text: "", action: "IGNORE" };
+        }
+        elizaLogger.log("handling tweet", tweet.id);
+        const formatTweet = (tweet: Tweet) => {
+            return `  ID: ${tweet.id}
+  From: ${tweet.name} (@${tweet.username})
+  Text: ${tweet.text}`;
+        };
+        const currentPost = formatTweet(tweet);
+
+        let homeTimeline = [];
+        // read the file if it exists
+        if (fs.existsSync("tweetcache/home_timeline.json")) {
+            homeTimeline = JSON.parse(
+                fs.readFileSync("tweetcache/home_timeline.json", "utf-8")
+            );
+        } else {
+            homeTimeline = await this.fetchHomeTimeline(50);
+            fs.writeFileSync(
+                "tweetcache/home_timeline.json",
+                JSON.stringify(homeTimeline, null, 2)
+            );
+        }
+
+        elizaLogger.debug("Thread: ", thread);
+        const formattedConversation = thread
+            .map(
+                (tweet) => `@${tweet.username} (${new Date(
+                    tweet.timestamp * 1000
+                ).toLocaleString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    month: "short",
+                    day: "numeric",
+                })}):
+        ${tweet.text}`
+            )
+            .join("\n\n");
+
+        elizaLogger.debug("formattedConversation: ", formattedConversation);
+
+        const formattedHomeTimeline =
+            `# ${this.runtime.character.name}'s Home Timeline\n\n` +
+            homeTimeline
+                .map((tweet) => {
+                    return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})${tweet.inReplyToStatusId ? ` In reply to: ${tweet.inReplyToStatusId}` : ""}\nText: ${tweet.text}\n---\n`;
+                })
+                .join("\n");
+
+        let state = await this.runtime.composeState(message, {
+            twitterClient: this.twitterClient,
+            twitterUserName: this.runtime.getSetting("TWITTER_USERNAME"),
+            currentPost,
+            formattedConversation,
+            timeline: formattedHomeTimeline,
+        });
+
+        // check if the tweet exists, save if it doesn't
+        const tweetId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
+        const tweetExists =
+            await this.runtime.messageManager.getMemoryById(tweetId);
+
+        if (!tweetExists) {
+            elizaLogger.log("tweet does not exist, saving");
+            const userIdUUID = stringToUuid(tweet.userId as string);
+            const roomId = stringToUuid(tweet.conversationId);
+
+            const message = {
+                id: tweetId,
+                agentId: this.runtime.agentId,
+                content: {
+                    text: tweet.text,
+                    url: tweet.permanentUrl,
+                    inReplyTo: tweet.inReplyToStatusId
+                        ? stringToUuid(
+                              tweet.inReplyToStatusId +
+                                  "-" +
+                                  this.runtime.agentId
+                          )
+                        : undefined,
+                },
+                userId: userIdUUID,
+                roomId,
+                createdAt: tweet.timestamp * 1000,
+            };
+            this.saveRequestMessage(message, state);
+        }
+
+        const shouldRespondContext = composeContext({
+            state,
+            template:
+                this.runtime.character.templates
+                    ?.twitterShouldRespondTemplate ||
+                this.runtime.character?.templates?.shouldRespondTemplate ||
+                twitterShouldRespondTemplate,
+        });
+
+        console.log("composeContext done");
+
+        const shouldRespond = await generateShouldRespond({
+            runtime: this.runtime,
+            context: shouldRespondContext,
+            modelClass: ModelClass.MEDIUM,
+        });
+
+        // Promise<"RESPOND" | "IGNORE" | "STOP" | null> {
+        if (shouldRespond !== "RESPOND") {
+            elizaLogger.log("Not responding to message");
+            return [];
+        }
+
+        const context = composeContext({
+            state,
+            template:
+                this.runtime.character.templates
+                    ?.twitterMessageHandlerTemplate ||
+                this.runtime.character?.templates?.messageHandlerTemplate ||
+                twitterMessageHandlerTemplate,
+        });
+
+        const response = await generateMessageResponse({
+            runtime: this.runtime,
+            context,
+            modelClass: ModelClass.MEDIUM,
+        });
+
+        const removeQuotes = (str: string) =>
+            str.replace(/^['"](.*)['"]$/, "$1");
+
+        const stringId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
+
+        response.inReplyTo = stringId;
+
+        response.text = removeQuotes(response.text);
+
+        if (response.text) {
+            try {
+                const callback: HandlerCallback = async (response: Content) => {
+                    const memories = await sendTweet(
+                        this,
+                        response,
+                        message.roomId,
+                        this.runtime.getSetting("TWITTER_USERNAME"),
+                        tweet.id
+                    );
+                    return memories;
+                };
+
+                const responseMessages = await callback(response);
+
+                state = (await this.runtime.updateRecentMessageState(
+                    state
+                )) as State;
+
+                for (const responseMessage of responseMessages) {
+                    if (
+                        responseMessage ===
+                        responseMessages[responseMessages.length - 1]
+                    ) {
+                        responseMessage.content.action = response.action;
+                    } else {
+                        responseMessage.content.action = "CONTINUE";
+                    }
+                    await this.runtime.messageManager.createMemory(
+                        responseMessage
+                    );
+                }
+
+                await this.runtime.evaluate(message, state);
+
+                await this.runtime.processActions(
+                    message,
+                    responseMessages,
+                    state
+                );
+                const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
+                // f tweets folder dont exist, create
+                if (!fs.existsSync("tweets")) {
+                    fs.mkdirSync("tweets");
+                }
+                const debugFileName = `tweets/tweet_generation_${tweet.id}.txt`;
+                fs.writeFileSync(debugFileName, responseInfo);
+                await wait();
+            } catch (error) {
+                elizaLogger.error(`Error sending response tweet: ${error}`);
+            }
+        }
+    }
+
+    async buildConversationThread(
+        tweet: Tweet,
+        maxReplies: number = 10
+    ): Promise<Tweet[]> {
+        const thread: Tweet[] = [];
+        const visited: Set<string> = new Set();
+
+        async function processThread(currentTweet: Tweet, depth: number = 0) {
+            console.log("Processing tweet:", {
+                id: currentTweet.id,
+                inReplyToStatusId: currentTweet.inReplyToStatusId,
+                depth: depth,
+            });
+
+            if (!currentTweet) {
+                console.log("No current tweet found for thread building");
+                return;
+            }
+
+            if (depth >= maxReplies) {
+                console.log("Reached maximum reply depth", depth);
+                return;
+            }
+
+            // Handle memory storage
+            const memory = await this.runtime.messageManager.getMemoryById(
+                stringToUuid(currentTweet.id + "-" + this.runtime.agentId)
+            );
+            if (!memory) {
+                const roomId = stringToUuid(
+                    currentTweet.conversationId + "-" + this.runtime.agentId
+                );
+                const userId = stringToUuid(currentTweet.userId);
+
+                await this.runtime.ensureConnection(
+                    userId,
+                    roomId,
+                    currentTweet.username,
+                    currentTweet.name,
+                    "twitter"
+                );
+
+                this.runtime.messageManager.createMemory({
+                    id: stringToUuid(
+                        currentTweet.id + "-" + this.runtime.agentId
+                    ),
+                    agentId: this.runtime.agentId,
+                    content: {
+                        text: currentTweet.text,
+                        source: "twitter",
+                        url: currentTweet.permanentUrl,
+                        inReplyTo: currentTweet.inReplyToStatusId
+                            ? stringToUuid(
+                                  currentTweet.inReplyToStatusId +
+                                      "-" +
+                                      this.runtime.agentId
+                              )
+                            : undefined,
+                    },
+                    createdAt: currentTweet.timestamp * 1000,
+                    roomId,
+                    userId:
+                        currentTweet.userId === this.twitterUserId
+                            ? this.runtime.agentId
+                            : stringToUuid(currentTweet.userId),
+                    embedding: embeddingZeroVector,
+                });
+            }
+
+            if (visited.has(currentTweet.id)) {
+                elizaLogger.log("Already visited tweet:", currentTweet.id);
+                return;
+            }
+
+            visited.add(currentTweet.id);
+            thread.unshift(currentTweet);
+
+            elizaLogger.debug("Current thread state:", {
+                length: thread.length,
+                currentDepth: depth,
+                tweetId: currentTweet.id,
+            });
+
+            if (currentTweet.inReplyToStatusId) {
+                console.log(
+                    "Fetching parent tweet:",
+                    currentTweet.inReplyToStatusId
+                );
+                try {
+                    const parentTweet = await this.twitterClient.getTweet(
+                        currentTweet.inReplyToStatusId
+                    );
+
+                    if (parentTweet) {
+                        console.log("Found parent tweet:", {
+                            id: parentTweet.id,
+                            text: parentTweet.text?.slice(0, 50),
+                        });
+                        await processThread(parentTweet, depth + 1);
+                    } else {
+                        console.log(
+                            "No parent tweet found for:",
+                            currentTweet.inReplyToStatusId
+                        );
+                    }
+                } catch (error) {
+                    console.log("Error fetching parent tweet:", {
+                        tweetId: currentTweet.inReplyToStatusId,
+                        error,
+                    });
+                }
+            } else {
+                console.log("Reached end of reply chain at:", currentTweet.id);
+            }
+        }
+
+        // Need to bind this context for the inner function
+        await processThread.bind(this)(tweet, 0);
+
+        elizaLogger.debug("Final thread built:", {
+            totalTweets: thread.length,
+            tweetIds: thread.map((t) => ({
+                id: t.id,
+                text: t.text?.slice(0, 50),
+            })),
+        });
+
+        return thread;
     }
 }
