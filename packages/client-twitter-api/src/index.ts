@@ -27,4 +27,4 @@ export const TwitterAPIClientInterface: Client = {
     },
 };
 
-export default TwitterClientInterface;
+export default TwitterAPIClientInterface;
