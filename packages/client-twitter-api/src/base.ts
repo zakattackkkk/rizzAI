@@ -134,6 +134,8 @@ export class ClientBase extends EventEmitter {
     requestQueue: RequestQueue = new RequestQueue();
     twitterUserId: string;
     twitterUsername: string;
+    protected twitterAccessToken: string;
+    protected twitterRefreshToken: string;
 
     onReady() {
         throw new Error(
@@ -180,8 +182,9 @@ export class ClientBase extends EventEmitter {
 
             this.twitterClient = refreshedClient;
             ClientBase._twitterClient = refreshedClient;
-            this.runtime.twitterAccessToken = accessToken;
-            this.runtime.twitterRefreshToken = newRefreshToken;
+            //#db Bring a database connection here and update the access token and refresh token
+            this.twitterAccessToken = accessToken;
+            this.twitterRefreshToken = newRefreshToken;
 
             console.log("Successfully refreshed Twitter tokens");
         } catch (error) {
