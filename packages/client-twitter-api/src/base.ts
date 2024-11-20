@@ -134,6 +134,8 @@ export class ClientBase extends EventEmitter {
     requestQueue: RequestQueue = new RequestQueue();
     twitterUserId: string;
     twitterUsername: string;
+    twitterName: string;
+    twitterDescription: string;
     protected twitterAccessToken: string;
     protected twitterRefreshToken: string;
 
@@ -155,7 +157,7 @@ export class ClientBase extends EventEmitter {
     protected async getAuthenticatedUserInfo() {
         return await this.executeWithTokenRefresh(async () => {
             const me = await this.twitterClient.v2.me({
-                "user.fields": ['username', 'name', 'id']
+                "user.fields": ['username', 'name', 'id', 'description']
             });
             return {
                 id: me.data.id,
@@ -324,6 +326,7 @@ export class ClientBase extends EventEmitter {
         } else {
             //#db Bring a database connection here and fetch the access token
             const accessToken = runtime.getSetting("TWITTER_ACCESS_TOKEN") ?? 'RTM2cXhsZV9ISVlXYXJNRmw1RVpYMTlmT1N0eW5lbFlYbkhGX3dzVkl1cW1oOjE3MzE2ODAxMzAyNzk6MToxOmF0OjE';
+            this.twitterAccessToken = accessToken;
             if (!accessToken) {
                 throw new Error("Twitter access token is required");
             }
@@ -372,11 +375,17 @@ export class ClientBase extends EventEmitter {
             // initiate twitter client
             try {
                 await this.executeWithTokenRefresh(async () => {
-                    const me = await this.twitterClient.v2.me();
+                    const me = await this.twitterClient.v2.me({
+                        "user.fields": ['username', 'name', 'id', 'description']
+                    });
                     this.twitterUserId = me.data.id;
                     console.log("Twitter user ID:", this.twitterUserId);
                     this.twitterUsername = me.data.username;
                     console.log("Twitter user Name:", this.twitterUsername);
+                    this.twitterDescription = me.data.description;
+                    console.log("Twitter user description:", this.twitterDescription);
+                    this.twitterName = me.data.name;
+                    console.log("Twitter Name:", this.twitterName);
 
                 });
                 
@@ -490,7 +499,6 @@ export class ClientBase extends EventEmitter {
         maxTweets: number,
         searchMode: SearchMode
     ): Promise<{tweets: Tweet[]}> {
-        await this.ensureReady();
         return await this.executeWithTokenRefresh(async () => {
             const searchResults = await this.twitterClient.v2.search({
                 query,
@@ -524,54 +532,59 @@ export class ClientBase extends EventEmitter {
     }
 
     private async populateTimeline() {
-        await this.ensureReady();
+        console.log("Populating timeline");
         const cacheFile = "timeline_cache.json";
-
+    
         // Check if the cache file exists
         if (fs.existsSync(cacheFile)) {
+            console.log("Cache file exists, reading cached results");
             // Read the cached search results from the file
             const cachedResults = JSON.parse(
                 fs.readFileSync(cacheFile, "utf-8")
             );
-
+            console.log(`Cached results: ${JSON.stringify(cachedResults)}`);
+    
             // Get the existing memories from the database
-            const existingMemories =
-                await this.runtime.messageManager.getMemoriesByRoomIds({
-                    agentId: this.runtime.agentId,
-                    roomIds: cachedResults.map((tweet) =>
-                        stringToUuid(
-                            tweet.conversationId + "-" + this.runtime.agentId
-                        )
-                    ),
-                });
-
+            const existingMemories = await this.runtime.messageManager.getMemoriesByRoomIds({
+                agentId: this.runtime.agentId,
+                roomIds: cachedResults.map((tweet) =>
+                    stringToUuid(
+                        tweet.conversationId + "-" + this.runtime.agentId
+                    )
+                ),
+            });
+            console.log(`Existing memories yes`);
+    
             // Create a Set to store the IDs of existing memories
             const existingMemoryIds = new Set(
                 existingMemories.map((memory) => memory.id.toString())
             );
-
+    
             // Check if any of the cached tweets exist in the existing memories
             const someCachedTweetsExist = cachedResults.some((tweet) =>
                 existingMemoryIds.has(tweet.id)
             );
-
+            console.log(`Some cached tweets exist: ${someCachedTweetsExist}`);
+    
             if (someCachedTweetsExist) {
                 // Filter out the cached tweets that already exist in the database
                 const tweetsToSave = cachedResults.filter(
                     (tweet) => !existingMemoryIds.has(tweet.id)
                 );
-
+                console.log(`Tweets to save: ${JSON.stringify(tweetsToSave)}`);
+    
                 // Save the missing tweets as memories
                 for (const tweet of tweetsToSave) {
+                    console.log(`Processing tweet to save: ${JSON.stringify(tweet)}`);
                     const roomId = stringToUuid(
                         tweet.conversationId ??
-                            "default-room-" + this.runtime.agentId
+                        "default-room-" + this.runtime.agentId
                     );
                     const tweetuserId =
                         tweet.userId === this.twitterUserId
                             ? this.runtime.agentId
                             : stringToUuid(tweet.userId);
-
+    
                     await this.runtime.ensureConnection(
                         tweetuserId,
                         roomId,
@@ -579,34 +592,31 @@ export class ClientBase extends EventEmitter {
                         tweet.name,
                         "twitter"
                     );
-
+    
                     const content = {
                         text: tweet.text,
                         url: tweet.permanentUrl,
                         source: "twitter",
                         inReplyTo: tweet.inReplyToStatusId
                             ? stringToUuid(
-                                  tweet.inReplyToStatusId +
-                                      "-" +
-                                      this.runtime.agentId
-                              )
+                                tweet.inReplyToStatusId + "-" + this.runtime.agentId
+                            )
                             : undefined,
                     } as Content;
-
+    
                     elizaLogger.log("Creating memory for tweet", tweet.id);
-
-                    // check if it already exists
-                    const memory =
-                        await this.runtime.messageManager.getMemoryById(
-                            stringToUuid(tweet.id + "-" + this.runtime.agentId)
-                        );
+    
+                    // Check if it already exists
+                    const memory = await this.runtime.messageManager.getMemoryById(
+                        stringToUuid(tweet.id + "-" + this.runtime.agentId)
+                    );
                     if (memory) {
                         elizaLogger.log(
                             "Memory already exists, skipping timeline population"
                         );
-                        break;
+                        continue; // Use continue instead of break to process remaining tweets
                     }
-
+    
                     await this.runtime.messageManager.createMemory({
                         id: stringToUuid(tweet.id + "-" + this.runtime.agentId),
                         userId: tweetuserId,
@@ -616,51 +626,58 @@ export class ClientBase extends EventEmitter {
                         embedding: embeddingZeroVector,
                         createdAt: tweet.timestamp * 1000,
                     });
+                    console.log(`Saved tweet memory for ID: ${tweet.id}`);
                 }
-
+    
                 elizaLogger.log(
                     `Populated ${tweetsToSave.length} missing tweets from the cache.`
                 );
                 return;
+            } else {
+                console.log("No cached tweets to save.");
             }
+        } else {
+            console.log("Cache file does not exist.");
         }
-
+    
         // Get the most recent 20 mentions and interactions
+        console.log("Fetching recent mentions and interactions");
         const mentionsAndInteractions = await this.fetchSearchTweets(
             `@${this.twitterUsername}`,
             20,
             SearchMode.Latest
         );
-
-
+    
         // Combine the timeline tweets and mentions/interactions
         const allTweets = [...mentionsAndInteractions.tweets];
-
+        console.log(`Fetched tweets: ${JSON.stringify(allTweets)}`);
+    
         // Create a Set to store unique tweet IDs
         const tweetIdsToCheck = new Set<string>();
-
+    
         // Add tweet IDs to the Set
         for (const tweet of allTweets) {
             tweetIdsToCheck.add(tweet.id);
         }
-
+    
         // Convert the Set to an array of UUIDs
         const tweetUuids = Array.from(tweetIdsToCheck).map((id) =>
             stringToUuid(id + "-" + this.runtime.agentId)
         );
-
+    
         // Check the existing memories in the database
-        const existingMemories =
-            await this.runtime.messageManager.getMemoriesByRoomIds({
-                agentId: this.runtime.agentId,
-                roomIds: tweetUuids,
-            });
-
+        console.log("Checking existing memories in the database");
+        const existingMemories = await this.runtime.messageManager.getMemoriesByRoomIds({
+            agentId: this.runtime.agentId,
+            roomIds: tweetUuids,
+        });
+        console.log(`Existing memories fetched`);
+    
         // Create a Set to store the existing memory IDs
         const existingMemoryIds = new Set<UUID>(
             existingMemories.map((memory) => memory.roomId)
         );
-
+    
         // Filter out the tweets that already exist in the database
         const tweetsToSave = allTweets.filter(
             (tweet) =>
@@ -668,16 +685,18 @@ export class ClientBase extends EventEmitter {
                     stringToUuid(tweet.id + "-" + this.runtime.agentId)
                 )
         );
-
+        console.log(`Tweets to save after checking existing memories: ${JSON.stringify(tweetsToSave)}`);
+    
         await this.runtime.ensureUserExists(
             this.runtime.agentId,
-            this.runtime.getSetting("TWITTER_USERNAME"),
+            this.twitterUsername,
             this.runtime.character.name,
             "twitter"
         );
-
+    
         // Save the new tweets as memories
         for (const tweet of tweetsToSave) {
+            console.log(`Saving new tweet: ${JSON.stringify(tweet)}`);
             const roomId = stringToUuid(
                 tweet.conversationId ?? "default-room-" + this.runtime.agentId
             );
@@ -685,7 +704,7 @@ export class ClientBase extends EventEmitter {
                 tweet.userId === this.twitterUserId
                     ? this.runtime.agentId
                     : stringToUuid(tweet.userId);
-
+    
             await this.runtime.ensureConnection(
                 tweetuserId,
                 roomId,
@@ -693,7 +712,7 @@ export class ClientBase extends EventEmitter {
                 tweet.name,
                 "twitter"
             );
-
+    
             const content = {
                 text: tweet.text,
                 url: tweet.permanentUrl,
@@ -702,7 +721,7 @@ export class ClientBase extends EventEmitter {
                     ? stringToUuid(tweet.inReplyToStatusId)
                     : undefined,
             } as Content;
-
+    
             await this.runtime.messageManager.createMemory({
                 id: stringToUuid(tweet.id + "-" + this.runtime.agentId),
                 userId: tweetuserId,
@@ -712,12 +731,13 @@ export class ClientBase extends EventEmitter {
                 embedding: embeddingZeroVector,
                 createdAt: tweet.timestamp * 1000,
             });
+            console.log(`Saved tweet memory for ID: ${tweet.id}`);
         }
-
+    
         // Cache the search results to the file
         fs.writeFileSync(cacheFile, JSON.stringify(allTweets));
+        console.log("Cached all tweets to file.");
     }
-
     // async setCookiesFromArray(cookiesArray: any[]) {
     //     const cookieStrings = cookiesArray.map(
     //         (cookie) =>
@@ -762,21 +782,18 @@ export class ClientBase extends EventEmitter {
 
     async initializeProfile() {
         const username = this.twitterUsername;
+        const description = this.twitterDescription;
+        const name = this.twitterName;
         if (!username) {
             console.error("Twitter username not configured");
             return;
         }
 
         try {
-            const profile = await this.requestQueue.add(async () => {
-                const response = await this.twitterClient.v2.userByUsername(username, {
-                    "user.fields": ["description", "name"]
-                });
-                const userData = response.data;
                 return {
                     username,
-                    screenName: userData.name || this.runtime.character.name,
-                    bio: userData.description ||
+                    screenName: name|| this.runtime.character.name,
+                    bio: description ||
                         typeof this.runtime.character.bio === "string"
                             ? (this.runtime.character.bio as string)
                             : this.runtime.character.bio.length > 0
@@ -785,9 +802,6 @@ export class ClientBase extends EventEmitter {
                     nicknames:
                         this.runtime.character.twitterProfile?.nicknames || [],
                 };
-            });
-
-            return profile;
         } catch (error) {
             console.error("Error fetching Twitter profile:", error);
             return {
