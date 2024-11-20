@@ -2,6 +2,7 @@ import { composeContext } from "@ai16z/eliza";
 import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
 import { embeddingZeroVector } from "@ai16z/eliza";
 import { messageCompletionFooter, shouldRespondFooter } from "@ai16z/eliza";
+import { elizaLogger } from "@ai16z/eliza";
 import {
     Content,
     HandlerCallback,
@@ -27,17 +28,16 @@ import {
     TextChannel,
     ThreadChannel,
 } from "discord.js";
-import { elizaLogger } from "@ai16z/eliza/src/logger.ts";
-import { AttachmentManager } from "./attachments.ts";
-import { VoiceManager } from "./voice.ts";
+import { AttachmentManager } from "./attachments";
+import { VoiceManager } from "./voice";
 
 const MAX_MESSAGE_LENGTH = 1900;
+
 async function generateSummary(
     runtime: IAgentRuntime,
     text: string
 ): Promise<{ title: string; description: string }> {
-    // make sure text is under 128k characters
-    text = trimTokens(text, 100000, "gpt-4o-mini"); // TODO: clean this up
+    text = trimTokens(text, 100000, "gpt-4o-mini");
 
     const prompt = `Please generate a concise summary for the following text:
   
@@ -81,8 +81,7 @@ export type InterestChannels = {
     };
 };
 
-const discordShouldRespondTemplate =
-    `# About {{agentName}}:
+export const discordShouldRespondTemplate = `# About {{agentName}}:
 {{bio}}
 
 # RESPONSE EXAMPLES
@@ -152,9 +151,7 @@ The goal is to decide whether {{agentName}} should respond to the last message.
 # INSTRUCTIONS: Choose the option that best describes {{agentName}}'s response to the last message. Ignore messages if they are addressed to someone else.
 ` + shouldRespondFooter;
 
-export const discordMessageHandlerTemplate =
-    // {{goals}}
-    `# Action Examples
+export const discordMessageHandlerTemplate = `# Action Examples
 {{actionExamples}}
 (Action examples are for reference only. Do not use the information from them in your response.)
 
@@ -204,15 +201,7 @@ export async function sendMessageInChunks(
                     content: message.trim(),
                 };
 
-                // if (i === 0 && inReplyTo) {
-                //   // Reply to the specified message for the first chunk
-                //   options.reply = {
-                //     messageReference: inReplyTo,
-                //   };
-                // }
-
                 if (i === messages.length - 1 && files && files.length > 0) {
-                    // Attach files to the last message chunk
                     options.files = files;
                 }
 
@@ -232,7 +221,6 @@ function splitMessage(content: string): string[] {
     let currentMessage = "";
 
     const rawLines = content?.split("\n") || [];
-    // split all lines into MAX_MESSAGE_LENGTH chunks so any long lines are split
     const lines = rawLines
         .map((line) => {
             const chunks = [];
@@ -261,7 +249,6 @@ function splitMessage(content: string): string[] {
 }
 
 function canSendMessage(channel) {
-    // if it is a DM channel, we can always send messages
     if (channel.type === ChannelType.DM) {
         return {
             canSend: true,
@@ -277,21 +264,18 @@ function canSendMessage(channel) {
         };
     }
 
-    // Required permissions for sending messages
     const requiredPermissions = [
         PermissionsBitField.Flags.ViewChannel,
         PermissionsBitField.Flags.SendMessages,
         PermissionsBitField.Flags.ReadMessageHistory,
     ];
 
-    // Add thread-specific permission if it's a thread
     if (channel instanceof ThreadChannel) {
         requiredPermissions.push(
             PermissionsBitField.Flags.SendMessagesInThreads
         );
     }
 
-    // Check permissions
     const permissions = channel.permissionsFor(botMember);
 
     if (!permissions) {
@@ -301,7 +285,6 @@ function canSendMessage(channel) {
         };
     }
 
-    // Check each required permission
     const missingPermissions = requiredPermissions.filter(
         (perm) => !permissions.has(perm)
     );
@@ -335,8 +318,7 @@ export class MessageManager {
     async handleMessage(message: DiscordMessage) {
         if (
             message.interaction ||
-            message.author.id ===
-                this.client.user?.id /* || message.author?.bot*/
+            message.author.id === this.client.user?.id
         )
             return;
 
@@ -466,12 +448,11 @@ export class MessageManager {
                 !hasInterest
             ) {
                 console.log("Ignoring muted room");
-                // Ignore muted rooms unless explicitly mentioned
                 return;
             }
 
             if (agentUserState === "FOLLOWED") {
-                shouldRespond = true; // Always respond in followed rooms
+                shouldRespond = true;
             } else if (
                 (!shouldRespond && hasInterest) ||
                 (shouldRespond && !hasInterest)
@@ -514,7 +495,6 @@ export class MessageManager {
                             );
                         }
                         if (message.channel.type === ChannelType.GuildVoice) {
-                            // For voice channels, use text-to-speech
                             const audioStream = await this.runtime
                                 .getService(ServiceType.SPEECH_GENERATION)
                                 .getInstance<ISpeechService>()
@@ -535,7 +515,6 @@ export class MessageManager {
                             };
                             return [memory];
                         } else {
-                            // For text channels, send the message
                             const messages = await sendMessageInChunks(
                                 message.channel as TextChannel,
                                 content.text,
@@ -546,8 +525,6 @@ export class MessageManager {
                             const memories: Memory[] = [];
                             for (const m of messages) {
                                 let action = content.action;
-                                // If there's only one message or it's the last message, keep the original action
-                                // For multiple messages, set all but the last to 'CONTINUE'
                                 if (
                                     messages.length > 1 &&
                                     m !== messages[messages.length - 1]
@@ -601,7 +578,6 @@ export class MessageManager {
         } catch (error) {
             console.error("Error handling message:", error);
             if (message.channel.type === ChannelType.GuildVoice) {
-                // For voice channels, use text-to-speech for the error message
                 const errorMessage = "Sorry, I had a glitch. What was that?";
                 const audioStream = await this.runtime
                     .getService(ServiceType.SPEECH_GENERATION)
@@ -609,7 +585,6 @@ export class MessageManager {
                     .generate(this.runtime, errorMessage);
                 await this.voiceManager.playAudioStream(userId, audioStream);
             } else {
-                // For text channels, send the error message
                 console.error("Error sending message:", error);
             }
         }
@@ -617,8 +592,6 @@ export class MessageManager {
 
     async cacheMessages(channel: TextChannel, count: number = 20) {
         const messages = await channel.messages.fetch({ limit: count });
-
-        // TODO: This is throwing an error but seems to work?
         for (const [_, message] of messages) {
             await this.handleMessage(message);
         }
@@ -630,7 +603,6 @@ export class MessageManager {
         let processedContent = message.content;
         let attachments: Media[] = [];
 
-        // Process code blocks in the message content
         const codeBlockRegex = /```([\s\S]*?)```/g;
         let match;
         while ((match = codeBlockRegex.exec(processedContent))) {
@@ -656,14 +628,12 @@ export class MessageManager {
             );
         }
 
-        // Process message attachments
         if (message.attachments.size > 0) {
             attachments = await this.attachmentManager.processAttachments(
                 message.attachments
             );
         }
 
-        // TODO: Move to attachments manager
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const urls = processedContent.match(urlRegex) || [];
 
@@ -714,28 +684,23 @@ export class MessageManager {
     }
 
     private async _shouldIgnore(message: DiscordMessage): Promise<boolean> {
-        // if the message is from us, ignore
         if (message.author.id === this.client.user?.id) return true;
         let messageContent = message.content.toLowerCase();
 
-        // Replace the bot's @ping with the character name
         const botMention = `<@!?${this.client.user?.id}>`;
         messageContent = messageContent.replace(
             new RegExp(botMention, "gi"),
             this.runtime.character.name.toLowerCase()
         );
 
-        // Replace the bot's username with the character name
         const botUsername = this.client.user?.username.toLowerCase();
         messageContent = messageContent.replace(
             new RegExp(`\\b${botUsername}\\b`, "g"),
             this.runtime.character.name.toLowerCase()
         );
 
-        // strip all special characters
         messageContent = messageContent.replace(/[^a-zA-Z0-9\s]/g, "");
 
-        // short responses where ruby should stop talking and disengage unless mentioned again
         const loseInterestWords = [
             "shut up",
             "stop",
@@ -770,7 +735,6 @@ export class MessageManager {
             return true;
         }
 
-        // If we're not interested in the channel and it's a short message, ignore it
         if (
             messageContent.length < 10 &&
             !this.interestChannels[message.channelId]
@@ -793,13 +757,11 @@ export class MessageManager {
             this.runtime.character.name + " chill",
         ];
 
-        // lose interest if pinged and told to stop responding
         if (targetedPhrases.some((phrase) => messageContent.includes(phrase))) {
             delete this.interestChannels[message.channelId];
             return true;
         }
 
-        // if the message is short, ignore but maintain interest
         if (
             !this.interestChannels[message.channelId] &&
             messageContent.length < 2
@@ -833,7 +795,6 @@ export class MessageManager {
         state: State
     ): Promise<boolean> {
         if (message.author.id === this.client.user?.id) return false;
-        // if (message.author.bot) return false;
         if (message.mentions.has(this.client.user?.id as string)) return true;
 
         const guild = message.guild;
@@ -857,7 +818,6 @@ export class MessageManager {
             return true;
         }
 
-        // If none of the above conditions are met, use the generateText to decide
         const shouldRespondContext = composeContext({
             state,
             template:

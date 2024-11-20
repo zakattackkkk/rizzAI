@@ -1,10 +1,10 @@
-import { embed } from "./embedding.ts";
+import { embed } from "./embedding";
 import {
     IAgentRuntime,
     IMemoryManager,
     type Memory,
     type UUID,
-} from "./types.ts";
+} from "./types";
 
 export const embeddingDimension = 1536;
 export const embeddingZeroVector = Array(embeddingDimension).fill(0);

@@ -9,11 +9,9 @@ import { defaultCharacter } from "@ai16z/eliza";
 import { AgentRuntime } from "@ai16z/eliza";
 import { settings } from "@ai16z/eliza";
 import {
-    Character,
-    IAgentRuntime,
-    IDatabaseAdapter,
     ModelProviderName,
 } from "@ai16z/eliza";
+import type { Character } from "@ai16z/eliza";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
 import { solanaPlugin } from "@ai16z/plugin-solana";
 import { nodePlugin } from "@ai16z/plugin-node";
@@ -160,7 +158,7 @@ export function getTokenForProvider(
 
 export async function createDirectRuntime(
     character: Character,
-    db: IDatabaseAdapter,
+    db: any,
     token: string
 ) {
     console.log("Creating runtime for character", character.name);
@@ -190,7 +188,7 @@ function initializeDatabase() {
 
 export async function initializeClients(
     character: Character,
-    runtime: IAgentRuntime
+    runtime: AgentRuntime
 ) {
     const clients = [];
     const clientTypes =
@@ -250,12 +248,9 @@ async function startAgent(character: Character, directClient: any) {
 
         const runtime = await createAgent(character, db, token);
 
-        const clients = await initializeClients(
-            character,
-            runtime as IAgentRuntime
-        );
+        const clients = await initializeClients(character, runtime);
 
-        directClient.registerAgent(await runtime);
+        directClient.registerAgent(runtime);
 
         return clients;
     } catch (error) {

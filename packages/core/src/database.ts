@@ -8,7 +8,7 @@ import {
     type UUID,
     Participant,
     IDatabaseAdapter,
-} from "./types.ts";
+} from "./types";
 
 /**
  * An abstract class representing a database adapter for managing various entities

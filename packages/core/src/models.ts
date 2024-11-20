@@ -1,5 +1,5 @@
-import settings from "./settings.ts";
-import { Models, ModelProviderName, ModelClass } from "./types.ts";
+import settings from "./settings";
+import { Models, ModelProviderName, ModelClass } from "./types";
 
 export const models: Models = {
     [ModelProviderName.OPENAI]: {

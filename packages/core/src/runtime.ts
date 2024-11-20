@@ -3,24 +3,24 @@ import {
     composeActionExamples,
     formatActionNames,
     formatActions,
-} from "./actions.ts";
-import { addHeader, composeContext } from "./context.ts";
-import { defaultCharacter } from "./defaultCharacter.ts";
+} from "./actions";
+import { addHeader, composeContext } from "./context";
+import { defaultCharacter } from "./defaultCharacter";
 import {
     evaluationTemplate,
     formatEvaluatorExamples,
     formatEvaluatorNames,
     formatEvaluators,
-} from "./evaluators.ts";
-import { generateText } from "./generation.ts";
-import { formatGoalsAsString, getGoals } from "./goals.ts";
-import { elizaLogger, embed, splitChunks } from "./index.ts";
-import { embeddingZeroVector, MemoryManager } from "./memory.ts";
-import { formatActors, formatMessages, getActorDetails } from "./messages.ts";
-import { parseJsonArrayFromText } from "./parsing.ts";
-import { formatPosts } from "./posts.ts";
-import { getProviders } from "./providers.ts";
-import settings from "./settings.ts";
+} from "./evaluators";
+import { generateText } from "./generation";
+import { formatGoalsAsString, getGoals } from "./goals";
+import { elizaLogger, embed, splitChunks } from "./index";
+import { embeddingZeroVector, MemoryManager } from "./memory";
+import { formatActors, formatMessages, getActorDetails } from "./messages";
+import { parseJsonArrayFromText } from "./parsing";
+import { formatPosts } from "./posts";
+import { getProviders } from "./providers";
+import settings from "./settings";
 import {
     Character,
     Goal,
@@ -40,8 +40,8 @@ import {
     type Actor,
     type Evaluator,
     type Memory,
-} from "./types.ts";
-import { stringToUuid } from "./uuid.ts";
+} from "./types";
+import { stringToUuid } from "./uuid";
 
 /**
  * Represents the runtime environment for an agent, handling message processing,

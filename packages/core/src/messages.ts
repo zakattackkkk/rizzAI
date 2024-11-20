@@ -4,7 +4,7 @@ import {
     type Content,
     type Memory,
     type UUID,
-} from "./types.ts";
+} from "./types";
 
 /**
  * Get details for a list of actors.

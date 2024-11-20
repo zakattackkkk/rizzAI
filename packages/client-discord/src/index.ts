@@ -1,7 +1,4 @@
-import { embeddingZeroVector } from "@ai16z/eliza";
-import { Character, Client as ElizaClient, IAgentRuntime } from "@ai16z/eliza";
-import { stringToUuid } from "@ai16z/eliza";
-import { elizaLogger } from "@ai16z/eliza";
+import { embeddingZeroVector, Character, Client as ElizaClient, IAgentRuntime, stringToUuid, elizaLogger } from "@ai16z/eliza";
 import {
     Client,
     Events,
@@ -12,16 +9,16 @@ import {
     User,
 } from "discord.js";
 import { EventEmitter } from "events";
-import chat_with_attachments from "./actions/chat_with_attachments.ts";
-import download_media from "./actions/download_media.ts";
-import joinvoice from "./actions/joinvoice.ts";
-import leavevoice from "./actions/leavevoice.ts";
-import summarize from "./actions/summarize_conversation.ts";
-import transcribe_media from "./actions/transcribe_media.ts";
-import { MessageManager } from "./messages.ts";
-import channelStateProvider from "./providers/channelState.ts";
-import voiceStateProvider from "./providers/voiceState.ts";
-import { VoiceManager } from "./voice.ts";
+import chat_with_attachments from "./actions/chat_with_attachments";
+import download_media from "./actions/download_media";
+import joinvoice from "./actions/joinvoice";
+import leavevoice from "./actions/leavevoice";
+import summarize from "./actions/summarize_conversation";
+import transcribe_media from "./actions/transcribe_media";
+import { MessageManager } from "./messages";
+import channelStateProvider from "./providers/channelState";
+import voiceStateProvider from "./providers/voiceState";
+import { VoiceManager } from "./voice";
 
 export class DiscordClient extends EventEmitter {
     apiToken: string;

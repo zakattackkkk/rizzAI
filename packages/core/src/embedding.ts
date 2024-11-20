@@ -1,11 +1,11 @@
 import { EmbeddingModel, FlagEmbedding } from "fastembed";
 import path from "path";
 import { fileURLToPath } from "url";
-import { models } from "./models.ts";
-import { IAgentRuntime, ModelProviderName, ModelClass } from "./types.ts";
+import { models } from "./models";
+import { IAgentRuntime, ModelProviderName, ModelClass } from "./types";
 import fs from "fs";
-import { trimTokens } from "./generation.ts";
-import settings from "./settings.ts";
+import { trimTokens } from "./generation";
+import settings from "./settings";
 
 function getRootPath() {
     const __filename = fileURLToPath(import.meta.url);

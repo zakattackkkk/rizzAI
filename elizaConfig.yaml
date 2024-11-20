@@ -2,3 +2,6 @@
 actions: []
 clients:
   - twitter
+  - telegram
+settings:
+  TELEGRAM_BOT_TOKEN: "7779098677:AAGFQYvqFePQgcP7sHGNDyEmfGz4MYv-udA"

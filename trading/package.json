@@ -1,0 +1,27 @@
+{
+  "name": "trading-dashboard",
+  "version": "1.0.0",
+  "description": "AI-powered Solana trading dashboard",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6",
+    "@types/isomorphic-fetch": "^0.0.39",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.39",
+    "@types/react-dom": "^18.2.17",
+    "autoprefixer": "^10.4.16",
+    "isomorphic-fetch": "^3.0.0",
+    "next": "^15.0.3",
+    "node-cache": "^5.1.2",
+    "postcss": "^8.4.31",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.3.2"
+  }
+}

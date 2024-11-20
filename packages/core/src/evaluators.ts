@@ -1,6 +1,6 @@
 import { names, uniqueNamesGenerator } from "unique-names-generator";
-import { ActionExample, type Evaluator } from "./types.ts";
-import { stringArrayFooter } from "./parsing.ts";
+import { ActionExample, type Evaluator } from "./types";
+import { stringArrayFooter } from "./parsing";
 
 /**
  * Template used for the evaluation generateText.

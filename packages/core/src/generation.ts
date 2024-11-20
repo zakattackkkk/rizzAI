@@ -1,35 +1,35 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
-import { getModel } from "./models.ts";
+import { getModel } from "./models";
 import {
     generateText as aiGenerateText,
     generateObject as aiGenerateObject,
     GenerateObjectResult,
 } from "ai";
-import { IImageDescriptionService, ModelClass, Service } from "./types.ts";
+import { IImageDescriptionService, ModelClass, Service } from "./types";
 import { Buffer } from "buffer";
 import { createOllama } from "ollama-ai-provider";
 import OpenAI from "openai";
 import { default as tiktoken, TiktokenModel } from "tiktoken";
 import Together from "together-ai";
-import { elizaLogger } from "./index.ts";
-import { models } from "./models.ts";
+import { elizaLogger } from "./index";
+import { models } from "./models";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import {
     parseBooleanFromText,
     parseJsonArrayFromText,
     parseJSONObjectFromText,
     parseShouldRespondFromText,
-} from "./parsing.ts";
-import settings from "./settings.ts";
+} from "./parsing";
+import settings from "./settings";
 import {
     Content,
     IAgentRuntime,
     ITextGenerationService,
     ModelProviderName,
     ServiceType,
-} from "./types.ts";
+} from "./types";
 import { ZodSchema } from "zod";
 
 /**

@@ -1,4 +1,4 @@
-import { Character, ModelProviderName } from "./types.ts";
+import { Character, ModelProviderName } from "./types";
 
 export const defaultCharacter: Character = {
     name: "Eliza",

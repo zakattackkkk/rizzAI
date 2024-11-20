@@ -5,17 +5,41 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     clean: true,
-    format: ["esm"], // Ensure you're targeting CommonJS
+    format: ["esm"],
+    bundle: true,
+    splitting: false,
+    dts: true,
     external: [
-        "dotenv", // Externalize dotenv to prevent bundling
-        "fs", // Externalize fs to use Node.js built-in module
-        "path", // Externalize other built-ins if necessary
+        "dotenv",
+        "fs",
+        "path",
+        "http",
+        "https",
+        "crypto",
+        "events",
+        "stream",
+        "util",
+        "url",
+        "os",
+        "buffer",
+        "zlib",
+        "tty",
+        "net",
+        "child_process",
         "@reflink/reflink",
         "@node-llama-cpp",
-        "https",
-        "http",
         "agentkeepalive",
         "fluent-ffmpeg",
-        // Add other modules you want to externalize
+        "discord.js",
+        "@discordjs/opus",
+        "@discordjs/rest",
+        "@discordjs/voice",
+        "prism-media",
+        "libsodium-wrappers",
+        "@ai16z/eliza"
     ],
+    esbuildOptions: (options) => {
+        options.bundle = true;
+        options.platform = 'node';
+    }
 });

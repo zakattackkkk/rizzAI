@@ -3,7 +3,7 @@ import {
     type Goal,
     type Objective,
     type UUID,
-} from "./types.ts";
+} from "./types";
 
 export const getGoals = async ({
     runtime,
