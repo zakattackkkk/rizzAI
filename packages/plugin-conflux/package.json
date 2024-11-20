@@ -5,9 +5,11 @@
   "type": "module",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "js-conflux-sdk": "^2.4.11"
+    "cive": "^0.7.1",
+    "@ai16z/eliza": "workspace:*"
   },
   "scripts": {
-      "build": "tsup --format esm --dts"
+    "build": "tsup --format esm --dts",
+    "dev": "tsup --watch"
   }
 }

@@ -15,6 +15,7 @@ import {
     elizaLogger,
 } from "@ai16z/eliza";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
+import { confluxPlugin } from "@ai16z/plugin-conflux";
 import { solanaPlugin } from "@ai16z/plugin-solana";
 import { nodePlugin } from "@ai16z/plugin-node";
 import Database from "better-sqlite3";
@@ -226,6 +227,7 @@ export async function createAgent(
         character,
         plugins: [
             bootstrapPlugin,
+            confluxPlugin,
             nodePlugin,
             character.settings.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
         ].filter(Boolean),
