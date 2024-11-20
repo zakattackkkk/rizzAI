@@ -929,7 +929,7 @@ export const generateObjectV2 = async ({
     const apiKey = runtime.token;
 
     try {
-        context = await trimTokens(context, max_context_length, modelClass);
+        context = await trimTokens(context, max_context_length, model);
 
         const modelOptions: ModelSettings = {
             prompt: context,
