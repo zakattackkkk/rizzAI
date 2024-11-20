@@ -76,6 +76,7 @@ export function loadCharacters(charactersArg: string): Character[] {
                 loadedCharacters.push(character);
             } catch (e) {
                 console.error(`Error loading character from ${path}: ${e}`);
+                throw e
             }
         }
     }
