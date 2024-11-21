@@ -10,4 +10,4 @@ npx concurrently --raw \
   "pnpm --dir packages/adapter-sqlite dev -- $*" \
   "pnpm --dir packages/adapter-postgres dev -- $*" \
   "pnpm --dir packages/client-twitter-api dev -- $*" \
-  "node -e \"setTimeout(() => process.exit(0), 5000)\" && pnpm --dir packages/agent dev -- $*"
+  "node -e \"setTimeout(() => process.exit(0), 5000)\" && pnpm --dir agent dev -- $*"

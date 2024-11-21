@@ -1,11 +1,10 @@
 import path from "node:path";
 
-import { models } from "./models.ts";
-import { IAgentRuntime, ModelProviderName, ModelClass } from "./types.ts";
-import fs from "fs";
 import { trimTokens } from "./generation.ts";
-import settings from "./settings.ts";
 import elizaLogger from "./logger.ts";
+import { models } from "./models.ts";
+import settings from "./settings.ts";
+import { IAgentRuntime, ModelClass, ModelProviderName } from "./types.ts";
 
 interface EmbeddingOptions {
     model: string;
@@ -93,7 +92,6 @@ export async function embed(runtime: IAgentRuntime, input: string) {
     if (
         isNode &&
         runtime.character.modelProvider !== ModelProviderName.OPENAI &&
-        runtime.character.modelProvider !== ModelProviderName.OLLAMA &&
         !settings.USE_OPENAI_EMBEDDING
     ) {
         return await getLocalEmbedding(input);

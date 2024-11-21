@@ -1,21 +1,20 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
-import { getModel } from "./models.ts";
 import {
-    generateText as aiGenerateText,
     generateObject as aiGenerateObject,
+    generateText as aiGenerateText,
     GenerateObjectResult,
 } from "ai";
-import { IImageDescriptionService, ModelClass, Service } from "./types.ts";
 import { Buffer } from "buffer";
 import { createOllama } from "ollama-ai-provider";
 import OpenAI from "openai";
-import { TiktokenModel, get_encoding, encoding_for_model } from "tiktoken";
+import { encoding_for_model, TiktokenModel } from "tiktoken";
 import Together from "together-ai";
+import { ZodSchema } from "zod";
 import { elizaLogger } from "./index.ts";
-import { models } from "./models.ts";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { getModel, models } from "./models.ts";
 import {
     parseBooleanFromText,
     parseJsonArrayFromText,
@@ -26,11 +25,12 @@ import settings from "./settings.ts";
 import {
     Content,
     IAgentRuntime,
+    IImageDescriptionService,
     ITextGenerationService,
+    ModelClass,
     ModelProviderName,
     ServiceType,
 } from "./types.ts";
-import { ZodSchema } from "zod";
 
 /**
  * Send a message to the model for a text generateText - receive a string back and parse how you'd like
@@ -244,17 +244,24 @@ export async function generateText({
                 elizaLogger.debug(
                     "Using local Llama model for text completion."
                 );
-                response = await runtime
-                    .getService(ServiceType.TEXT_GENERATION)
-                    .getInstance<ITextGenerationService>()
-                    .queueTextCompletion(
-                        context,
-                        temperature,
-                        _stop,
-                        frequency_penalty,
-                        presence_penalty,
-                        max_response_length
-                    );
+                const textGenerationService = runtime
+                    .getService<ITextGenerationService>(
+                        ServiceType.TEXT_GENERATION
+                    )
+                    .getInstance();
+
+                if (!textGenerationService) {
+                    throw new Error("Text generation service not found");
+                }
+
+                response = await textGenerationService.queueTextCompletion(
+                    context,
+                    temperature,
+                    _stop,
+                    frequency_penalty,
+                    presence_penalty,
+                    max_response_length
+                );
                 elizaLogger.debug("Received response from local Llama model.");
                 break;
             }
@@ -307,14 +314,14 @@ export async function generateText({
 
             case ModelProviderName.OLLAMA:
                 {
-                    console.debug("Initializing Ollama model.");
+                    elizaLogger.debug("Initializing Ollama model.");
 
                     const ollamaProvider = createOllama({
                         baseURL: models[provider].endpoint + "/api",
                     });
                     const ollama = ollamaProvider(model);
 
-                    console.debug("****** MODEL\n", model);
+                    elizaLogger.debug("****** MODEL\n", model);
 
                     const { text: ollamaResponse } = await aiGenerateText({
                         model: ollama,
@@ -327,7 +334,7 @@ export async function generateText({
 
                     response = ollamaResponse;
                 }
-                console.debug("Received response from Ollama model.");
+                elizaLogger.debug("Received response from Ollama model.");
                 break;
 
             case ModelProviderName.HEURIST: {
@@ -852,16 +859,20 @@ export const generateCaption = async (
     description: string;
 }> => {
     const { imageUrl } = data;
-    const resp = await runtime
-        .getService(ServiceType.IMAGE_DESCRIPTION)
-        .getInstance<IImageDescriptionService>()
-        .describeImage(imageUrl);
+    const imageDescriptionService = runtime
+        .getService<IImageDescriptionService>(ServiceType.IMAGE_DESCRIPTION)
+        .getInstance();
+
+    if (!imageDescriptionService) {
+        throw new Error("Image description service not found");
+    }
+
+    const resp = await imageDescriptionService.describeImage(imageUrl);
     return {
         title: resp.title.trim(),
         description: resp.description.trim(),
     };
 };
-
 /**
  * Configuration options for generating objects with a model.
  */

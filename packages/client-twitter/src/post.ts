@@ -1,6 +1,14 @@
 import { Tweet } from "agent-twitter-client";
+import {
+    composeContext,
+    generateText,
+    embeddingZeroVector,
+    IAgentRuntime,
+    ModelClass,
+    stringToUuid,
+} from "@ai16z/eliza";
 import fs from "fs";
-import { composeContext } from "@ai16z/eliza";
+import { composeContext, elizaLogger } from "@ai16z/eliza";
 import { generateText } from "@ai16z/eliza";
 import { embeddingZeroVector } from "@ai16z/eliza";
 import { IAgentRuntime, ModelClass } from "@ai16z/eliza";
@@ -76,7 +84,7 @@ export class TwitterPostClient extends ClientBase {
                 generateNewTweetLoop(); // Set up next iteration
             }, delay);
 
-            console.log(`Next tweet scheduled in ${randomMinutes} minutes`);
+            elizaLogger.log(`Next tweet scheduled in ${randomMinutes} minutes`);
         };
 
         if (postImmediately) {
@@ -92,7 +100,7 @@ export class TwitterPostClient extends ClientBase {
     }
 
     private async generateNewTweet() {
-        console.log("Generating new tweet");
+        elizaLogger.log("Generating new tweet");
         try {
             await this.runtime.ensureUserExists(
                 this.runtime.agentId,
@@ -103,17 +111,13 @@ export class TwitterPostClient extends ClientBase {
 
             let homeTimeline = [];
 
-            if (!fs.existsSync("tweetcache")) fs.mkdirSync("tweetcache");
-            if (fs.existsSync("tweetcache/home_timeline.json")) {
-                homeTimeline = JSON.parse(
-                    fs.readFileSync("tweetcache/home_timeline.json", "utf-8")
-                );
+            const cachedTimeline = await this.getCachedTimeline();
+
+            if (cachedTimeline) {
+                homeTimeline = cachedTimeline;
             } else {
                 homeTimeline = await this.fetchHomeTimeline(50);
-                fs.writeFileSync(
-                    "tweetcache/home_timeline.json",
-                    JSON.stringify(homeTimeline, null, 2)
-                );
+                this.cacheTimeline(homeTimeline);
             }
 
             const formattedHomeTimeline =
@@ -158,6 +162,11 @@ export class TwitterPostClient extends ClientBase {
 
             // Use the helper function to truncate to complete sentence
             const content = truncateToCompleteSentence(formattedTweet);
+
+            if (this.runtime.getSetting("TWITTER_DRY_RUN") === 'true') {
+                elizaLogger.info(`Dry run: would have posted tweet: ${content}`);
+                return;
+            }
 
             try {
                 const result = await this.requestQueue.add(

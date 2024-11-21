@@ -10,6 +10,10 @@
   
 </div>
 
+## 🌍 README Translations
+
+[中文说明](./README_CN.md) | [日本語の説明](./README_JA.md) | [한국어 설명](./README_KOR.md) | [Français](./README_FR.md) | [Português](./README_PTBR.md) | [Türkçe](./README_TR.md) | [Русский](./README_RU.md) | [Español](./README_ES.md) | [Italiano](./README_IT.md)
+
 ## ✨ Features
 
 -   🛠️ Full-featured Discord, Twitter and Telegram connectors
@@ -29,19 +33,6 @@
 -   🎮 Video Game NPCs
 -   🧠 Trading
 
-## 🌍 Translations
-
-<details>
-<summary>Available Languages</summary>
-
--   [中文说明](./README_CN.md)
--   [日本語の説明](./README_JA.md)
--   [한국어 설명](./README_KOR.md)
--   [Instructions en français](./README_FR.md)
--   [Instruções em português](./README_PTBR.md)
-
-</details>
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -50,15 +41,40 @@
 -   [Node.js 22+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 -   [pnpm](https://pnpm.io/installation)
 
-> **Note for Windows Users:** WSL is required
+> **Note for Windows Users:** [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/install-manual) is required.
+
+### Use the Starter (Recommended)
+
+```bash
+git clone https://github.com/ai16z/eliza-starter.git
+
+cp .env.example .env
+
+pnpm i && pnpm start
+```
+
+Then read the [Documentation](https://ai16z.github.io/eliza/) to learn how to customize your Eliza.
+
+### Manually Start Eliza (Only recommended if you know what you are doing)
+
+```bash
+# Clone the repository
+git clone https://github.com/ai16z/eliza.git
+
+# Checkout the latest release
+# This project iterates fast, so we recommend checking out the latest release
+git checkout $(git describe --tags --abbrev=0)
+```
 
 ### Edit the .env file
 
-Copy .env.example to .env and fill in the appropriate values
+Copy .env.example to .env and fill in the appropriate values.
 
 ```
 cp .env.example .env
 ```
+
+Note: .env is optional. If your planning to run multiple distinct agents, you can pass secrets through the character JSON
 
 ### Automatically Start Eliza
 
@@ -70,7 +86,7 @@ sh scripts/start.sh
 
 ### Edit the character file
 
-1. Open `packages/agent/src/character.ts` to modify the default character. Uncomment and edit.
+1. Open `agent/src/character.ts` to modify the default character. Uncomment and edit.
 
 2. To load custom characters:
     - Use `pnpm start --characters="path/to/your/character.json"`

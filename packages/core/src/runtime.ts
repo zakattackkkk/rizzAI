@@ -26,6 +26,7 @@ import {
     Goal,
     HandlerCallback,
     IAgentRuntime,
+    ICacheManager,
     IDatabaseAdapter,
     IMemoryManager,
     ModelClass,
@@ -42,6 +43,7 @@ import {
     type Memory,
 } from "./types.ts";
 import { stringToUuid } from "./uuid.ts";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Represents the runtime environment for an agent, handling message processing,
@@ -130,6 +132,7 @@ export class AgentRuntime implements IAgentRuntime {
 
     services: Map<ServiceType, Service> = new Map();
     memoryManagers: Map<string, IMemoryManager> = new Map();
+    cacheManager: ICacheManager;
 
     registerMemoryManager(manager: IMemoryManager): void {
         if (!manager.tableName) {
@@ -150,17 +153,19 @@ export class AgentRuntime implements IAgentRuntime {
         return this.memoryManagers.get(tableName) || null;
     }
 
-    getService(service: ServiceType): typeof Service | null {
+    getService<T extends Service>(service: ServiceType): T | null {
         const serviceInstance = this.services.get(service);
         if (!serviceInstance) {
             elizaLogger.error(`Service ${service} not found`);
             return null;
         }
-        return serviceInstance as typeof Service;
+        return serviceInstance as T;
     }
-    registerService(service: Service): void {
-        const serviceType = (service as typeof Service).serviceType;
+
+    async registerService(service: Service): Promise<void> {
+        const serviceType = service.serviceType;
         elizaLogger.log("Registering service:", serviceType);
+
         if (this.services.has(serviceType)) {
             elizaLogger.warn(
                 `Service ${serviceType} is already registered. Skipping registration.`
@@ -168,7 +173,19 @@ export class AgentRuntime implements IAgentRuntime {
             return;
         }
 
-        this.services.set((service as typeof Service).serviceType, service);
+        try {
+            await service.initialize(this);
+            this.services.set(serviceType, service);
+            elizaLogger.success(
+                `Service ${serviceType} initialized successfully`
+            );
+        } catch (error) {
+            elizaLogger.error(
+                `Failed to initialize service ${serviceType}:`,
+                error
+            );
+            throw error;
+        }
     }
 
     /**
@@ -206,6 +223,7 @@ export class AgentRuntime implements IAgentRuntime {
         databaseAdapter: IDatabaseAdapter; // The database adapter used for interacting with the database
         fetch?: typeof fetch | unknown;
         speechModelPath?: string;
+        cacheManager: ICacheManager;
         logging?: boolean;
     }) {
         this.#conversationLength =
@@ -213,9 +231,9 @@ export class AgentRuntime implements IAgentRuntime {
         this.databaseAdapter = opts.databaseAdapter;
         // use the character id if it exists, otherwise use the agentId if it is passed in, otherwise use the character name
         this.agentId =
-            opts.character.id ??
-            opts.agentId ??
-            stringToUuid(opts.character.name);
+            opts.character?.id ??
+            opts?.agentId ??
+            stringToUuid(opts.character?.name ?? uuidv4());
 
         elizaLogger.success("Agent ID", this.agentId);
 
@@ -224,6 +242,8 @@ export class AgentRuntime implements IAgentRuntime {
         if (!opts.databaseAdapter) {
             throw new Error("No database adapter provided");
         }
+
+        this.cacheManager = opts.cacheManager;
 
         this.messageManager = new MemoryManager({
             runtime: this,
@@ -269,7 +289,7 @@ export class AgentRuntime implements IAgentRuntime {
 
         this.token = opts.token;
 
-        [...(opts.character.plugins || []), ...(opts.plugins || [])].forEach(
+        [...(opts.character?.plugins || []), ...(opts.plugins || [])].forEach(
             (plugin) => {
                 plugin.actions?.forEach((action) => {
                     this.registerAction(action);
@@ -348,11 +368,14 @@ export class AgentRuntime implements IAgentRuntime {
                         text: knowledgeItem,
                     },
                 });
+
                 const fragments = await splitChunks(knowledgeItem, 1200, 200);
                 for (const fragment of fragments) {
                     const embedding = await embed(this, fragment);
                     await this.knowledgeManager.createMemory({
-                        id: stringToUuid(fragment),
+                        // We namespace the knowledge base uuid to avoid id
+                        // collision with the document above.
+                        id: stringToUuid(knowledgeId + fragment),
                         roomId: this.agentId,
                         agentId: this.agentId,
                         userId: this.agentId,
@@ -993,17 +1016,11 @@ Text: ${attachment.text}
                           (() => {
                               const all = this.character?.style?.all || [];
                               const chat = this.character?.style?.chat || [];
-                              const shuffled = [...all, ...chat].sort(
-                                  () => 0.5 - Math.random()
-                              );
-                              const allSliced = shuffled.slice(
-                                  0,
-                                  conversationLength / 2
-                              );
-                              return allSliced.concat(allSliced).join("\n");
+                              return [...all, ...chat].join("\n");
                           })()
                       )
                     : "",
+
             postDirections:
                 this.character?.style?.all?.length > 0 ||
                 this.character?.style?.post.length > 0
@@ -1012,15 +1029,31 @@ Text: ${attachment.text}
                           (() => {
                               const all = this.character?.style?.all || [];
                               const post = this.character?.style?.post || [];
-                              const shuffled = [...all, ...post].sort(
-                                  () => 0.5 - Math.random()
-                              );
-                              return shuffled
-                                  .slice(0, conversationLength / 2)
-                                  .join("\n");
+                              return [...all, ...post].join("\n");
                           })()
                       )
                     : "",
+
+            //old logic left in for reference
+            //food for thought. how could we dynamically decide what parts of the character to add to the prompt other than random? rag? prompt the llm to decide?
+            /*
+            postDirections:
+                this.character?.style?.all?.length > 0 ||
+                this.character?.style?.post.length > 0
+                    ? addHeader(
+                            "# Post Directions for " + this.character.name,
+                            (() => {
+                                const all = this.character?.style?.all || [];
+                                const post = this.character?.style?.post || [];
+                                const shuffled = [...all, ...post].sort(
+                                    () => 0.5 - Math.random()
+                                );
+                                return shuffled
+                                    .slice(0, conversationLength / 2)
+                                    .join("\n");
+                            })()
+                        )
+                    : "",*/
             // Agent runtime stuff
             senderName,
             actors:
