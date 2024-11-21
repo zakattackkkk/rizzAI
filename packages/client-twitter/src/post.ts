@@ -133,7 +133,11 @@ export class TwitterPostClient {
             if (cachedTimeline) {
                 homeTimeline = cachedTimeline;
             } else {
-                homeTimeline = await this.client.fetchHomeTimeline(10);
+                homeTimeline =
+                    await this.client.twitterClient.fetchHomeTimeline(
+                        10,
+                        homeTimeline.map((t) => t.id)
+                    );
                 await this.client.cacheTimeline(homeTimeline);
             }
             const formattedHomeTimeline =
@@ -202,13 +206,15 @@ export class TwitterPostClient {
                     this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET");
                 if (hasV2Settings) {
                     // v2 logic
-                    tweet = await this.requestQueue.add(
+                    this.client;
+                    tweet = await this.client.requestQueue.add(
                         async () =>
-                            await this.twitterClient.sendTweetV2(content)
+                            await this.client.twitterClient.sendTweetV2(content)
                     );
                 } else {
-                    const result = await this.requestQueue.add(
-                        async () => await this.twitterClient.sendTweet(content)
+                    const result = await this.client.requestQueue.add(
+                        async () =>
+                            await this.client.twitterClient.sendTweet(content)
                     );
                     const body = await result.json();
                     const tweetResult =
@@ -234,24 +240,19 @@ export class TwitterPostClient {
                 const postId = tweet.id;
                 const conversationId =
                     tweet.conversationId + "-" + this.runtime.agentId;
-                const roomId = stringToUuid(conversationId);
-                              await this.runtime.cacheManager.set(
-                    `twitter/${this.client.profile.username}/lastPost`,
-                    {
-                        id: tweet.id,
-                        timestamp: Date.now(),
-                    }
-                );
+                // await this.runtime..set(
+                //     `twitter/${this.client.profile.username}/lastPost`,
+                //     {
+                //         id: tweet.id,
+                //         timestamp: Date.now(),
+                //     }
+                // );
 
                 await this.client.cacheTweet(tweet);
 
                 homeTimeline.push(tweet);
                 await this.client.cacheTimeline(homeTimeline);
                 elizaLogger.log(`Tweet posted:\n ${tweet.permanentUrl}`);
-              
-                const roomId = stringToUuid(
-                    tweet.conversationId + "-" + this.runtime.agentId
-                );
 
                 await this.client.cacheTweet(tweet);
 

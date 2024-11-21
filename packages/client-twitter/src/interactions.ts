@@ -215,7 +215,10 @@ export class TwitterInteractionClient {
         if (cachedTimeline) {
             homeTimeline = cachedTimeline;
         } else {
-            homeTimeline = await this.client.fetchHomeTimeline(50);
+            homeTimeline = await this.client.twitterClient.fetchHomeTimeline(
+                50,
+                homeTimeline.map((t) => t.id)
+            );
             await this.client.cacheTimeline(homeTimeline);
         }
 
