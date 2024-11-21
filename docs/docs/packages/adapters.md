@@ -139,16 +139,16 @@ Key components:
 
 ```bash
 # PostgreSQL
-pnpm add @ai16z/adapter-postgres pg
+pnpm add "@ai16z/adapter-postgres" pg
 
 # SQLite
-pnpm add @ai16z/adapter-sqlite better-sqlite3
+pnpm add "@ai16z/adapter-sqlite" better-sqlite3
 
 # SQL.js
-pnpm add @ai16z/adapter-sqljs sql.js
+pnpm add "@ai16z/adapter-sqljs" sql.js
 
 # Supabase
-pnpm add @ai16z/adapter-supabase @supabase/supabase-js
+pnpm add "@ai16z/adapter-supabase" @supabase/supabase-js
 ```
 
 ---

@@ -5,6 +5,7 @@ import { DiscordClientInterface } from "@ai16z/client-discord";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
+import { TwitterAPIClientInterface } from "@ai16z/client-twitter-api";
 import {
     DbCacheAdapter,
     defaultCharacter,
@@ -108,7 +109,7 @@ export async function loadCharacters(
 
     if (loadedCharacters.length === 0) {
         console.log("No characters found, using default character");
-        loadedCharacters.push(defaultCharacter);
+        loadedCharacters.push(character);
     }
 
     return loadedCharacters;
@@ -213,6 +214,11 @@ export async function initializeClients(
         clients.push(twitterClients);
     }
 
+    if (clientTypes.includes("twitter-api")) {
+        const twitterAPIClients = await TwitterAPIClientInterface.start(runtime);
+        clients.push(twitterAPIClients);
+    }
+
     if (character.plugins?.length > 0) {
         for (const plugin of character.plugins) {
             if (plugin.clients) {
@@ -302,7 +308,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
 }
 
 const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
+    const directClient: DirectClient = await DirectClientInterface.start() as DirectClient;
     const args = parseArguments();
 
     let charactersArg = args.characters || args.character;

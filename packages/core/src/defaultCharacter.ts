@@ -1,9 +1,9 @@
-import { Character, ModelProviderName } from "./types.ts";
+import { Clients, Character, ModelProviderName } from "./types.ts";
 
 export const defaultCharacter: Character = {
     name: "Eliza",
     plugins: [],
-    clients: [],
+    clients: [Clients.TWITTER_API],
     modelProvider: ModelProviderName.OPENAI,
     settings: {
         secrets: {},
