@@ -602,6 +602,8 @@ export type Character = {
 
     /** Model provider to use */
     modelProvider: ModelProviderName;
+    /** Optional image model provider */
+    imageModelProvider?: ModelProviderName;
 
     /** Optional model endpoint override */
     modelEndpointOverride?: string;

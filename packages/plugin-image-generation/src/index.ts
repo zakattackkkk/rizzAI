@@ -1,9 +1,12 @@
 import { elizaLogger } from "@ai16z/eliza";
 import {
     Action,
+    composeContext,
+    generateText,
     HandlerCallback,
     IAgentRuntime,
     Memory,
+    ModelClass,
     Plugin,
     State,
 } from "@ai16z/eliza";
@@ -12,6 +15,22 @@ import { generateImage } from "@ai16z/eliza";
 import fs from "fs";
 import path from "path";
 import { validateImageGenConfig } from "./enviroment";
+
+const imagePromptTemplate = `# Knowledge
+{{knowledge}}
+
+About {{agentName}}:
+{{bio}}
+{{lore}}
+{{postDirections}}
+
+{{providers}}
+
+{{recentPosts}}
+
+# Task: Generate an image description in the voice and style of {{agentName}} according to the previous <user_message>.
+Write a two sentence image description that considers the <user_message> and may also include {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Try to write something totally different than previous posts. Do not add commentary or acknowledge this request, just write the description of the image to be generated.
+Your response should not contain any questions. Brief, concise statements only. No emojis. Use \\n\\n (double spaces) between statements.`;
 
 export function saveBase64Image(base64Data: string, filename: string): string {
     // Create generatedImages directory if it doesn't exist
@@ -94,15 +113,34 @@ const imageGeneration: Action = {
         options: any,
         callback: HandlerCallback
     ) => {
-        elizaLogger.log("Composing state for message:", message);
-        state = (await runtime.composeState(message)) as State;
+        const agentContext = composeContext({
+            state,
+            template:
+                runtime.character.templates?.imagePromptTemplate ||
+                imagePromptTemplate,
+        });
+
+        const agentImagePrompt = await generateText({
+            runtime,
+            context: `${agentContext}\n\n<user message>${message.content.text}</user message>`,
+            modelClass: ModelClass.SMALL,
+        });
+
+        elizaLogger.log("Agent image prompt:", agentImagePrompt);
+
+
+        //state = (await runtime.composeState(message)) as State;
         const userId = runtime.agentId;
         elizaLogger.log("User ID:", userId);
 
-        const imagePrompt = message.content.text;
-        elizaLogger.log("Image prompt received:", imagePrompt);
+        const context = `You are an AI assistant specialized in crafting effective prompts for image generation. Your task is to analyze a user's message and create a comprehensive, natural-language prompt that will guide an image generation algorithm to produce high-quality, visually appealing images.\n\nHere is the user's message:\n<user_message> ${agentImagePrompt} </user_message>\n\nBegin by analyzing the content of the user's message. Follow these steps:\n\n1. List out key elements from the user's message, categorizing them to ensure comprehensive coverage:\n   * Topic: The main subject or scene with specific details\n   * Material: The medium or style (e.g., digital painting, 3D render)\n   * Style: The artistic direction (e.g., fantasy, vaporwave)\n   * Artist: Specific artists to influence the visual style\n   * Webpage Influence: Art platforms like ArtStation or DeviantArt for quality enhancement\n   * Sharpness: Terms like "sharp focus" or "highly detailed" for clarity\n   * Extra Details: Descriptors to enhance atmosphere (e.g., cinematic, dystopian)\n   * Shade and Color: Color-related keywords to control mood (e.g., moody lighting)\n   * Lighting and Brightness: Specific lighting styles (e.g., dramatic shadows)\n   * Camera Angle: Perspective and framing (e.g., close-up, wide shot, aerial view)\n   * Composition: Layout guidance (e.g., rule of thirds, centered, dynamic)\n   * Time Period: Temporal context if relevant\n   * Cultural Elements: Any specific cultural influences\n   * Textures: Surface quality descriptions\n   * Weather/Atmosphere: Environmental conditions if applicable\n   * Negative Prompts: Elements to exclude from the image\n\n2. Brainstorm complementary elements that would enhance the user's vision:\n   * Suggest fitting artists and styles if not specified\n   * Consider atmospheric elements that would strengthen the concept\n   * Identify potential technical aspects that would improve the result\n   * Note any elements that should be avoided to maintain the desired look\n\n3. Construct your final prompt by:\n   * Leading with the most important scene/subject details from the user's message\n   * Incorporating all relevant technical and stylistic elements\n   * Grouping related concepts together naturally\n   * Maintaining clear, flowing language throughout\n   * Adding complementary details that enhance but don't alter the core concept\n   * Concluding with negative prompts separated by a "Negative:" marker\n\nRemember:\n- Preserve ALL specific details from the user's original message\n- Don't force details into a rigid template\n- Create a cohesive, readable description\n- Keep the focus on the user's core concept while enhancing it with technical and artistic refinements\n\nYour output should contain ONLY the final prompt text, with no additional explanations, tags, or formatting.`;
 
-        // TODO: Generate a prompt for the image
+        const imagePrompt = await generateText({
+            runtime,
+            context,
+            modelClass: ModelClass.SMALL,
+        });
+        elizaLogger.log("Image prompt received:", imagePrompt);
 
         const res: { image: string; caption: string }[] = [];
 
@@ -148,7 +186,7 @@ const imageGeneration: Action = {
                     elizaLogger.error("Caption generation failed, using default caption:", error);
                 }*/
 
-                const _caption = "...";
+                //const caption = "...";
                 /*= await generateCaption(
                     {
                         imageUrl: image,
@@ -156,25 +194,25 @@ const imageGeneration: Action = {
                     runtime
                 );*/
 
-                res.push({ image: filepath, caption: "..." }); //caption.title });
+                res.push({ image: filepath, caption: agentImagePrompt }); //caption.title });
 
                 elizaLogger.log(
                     `Generated caption for image ${i + 1}:`,
-                    "..." //caption.title
+                    agentImagePrompt //caption.title
                 );
                 //res.push({ image: image, caption: caption.title });
 
                 callback(
                     {
-                        text: "...", //caption.description,
+                        text: agentImagePrompt, //caption.description,
                         attachments: [
                             {
                                 id: crypto.randomUUID(),
                                 url: filepath,
                                 title: "Generated image",
                                 source: "imageGeneration",
-                                description: "...", //caption.title,
-                                text: "...", //caption.description,
+                                description: imagePrompt, //caption.title,
+                                text: agentImagePrompt, //caption.description,
                             },
                         ],
                     },
@@ -254,6 +292,19 @@ const imageGeneration: Action = {
                 user: "{{agentName}}",
                 content: {
                     text: "Here's an image of a cat with a hat",
+                    action: "GENERATE_IMAGE",
+                },
+            },
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: { text: "Show me a picture of you" },
+            },
+            {
+                user: "{{agentName}}",
+                content: {
+                    text: "Here's a picture of me",
                     action: "GENERATE_IMAGE",
                 },
             },

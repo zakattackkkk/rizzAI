@@ -768,15 +768,27 @@ export const generateImage = async (
         count = 1;
     }
 
-    const model = getModel(runtime.character.modelProvider, ModelClass.IMAGE);
-    const modelSettings = models[runtime.character.modelProvider].imageSettings;
-    const apiKey =
-        runtime.token ??
-        runtime.getSetting("HEURIST_API_KEY") ??
-        runtime.getSetting("TOGETHER_API_KEY") ??
-        runtime.getSetting("OPENAI_API_KEY");
+    const imageModelProvider =
+        runtime.character.imageModelProvider ?? runtime.character.modelProvider;
+
+    elizaLogger.log("imageModelProvider: ", imageModelProvider);
+
+    const model = getModel(imageModelProvider, ModelClass.IMAGE);
+    const modelSettings = models[imageModelProvider].imageSettings;
+    let apiKey = runtime.token;
+    switch (imageModelProvider) {
+        case ModelProviderName.HEURIST:
+            apiKey = runtime.getSetting("HEURIST_API_KEY");
+            break;
+        case ModelProviderName.LLAMACLOUD:
+            apiKey = runtime.getSetting("TOGETHER_API_KEY");
+            break;
+        case ModelProviderName.OPENAI:
+            apiKey = runtime.getSetting("OPENAI_API_KEY");
+            break;
+    }
     try {
-        if (runtime.character.modelProvider === ModelProviderName.HEURIST) {
+        if (imageModelProvider === ModelProviderName.HEURIST) {
             const response = await fetch(
                 "http://sequencer.heurist.xyz/submit_job",
                 {
@@ -814,11 +826,11 @@ export const generateImage = async (
             const imageURL = await response.json();
             return { success: true, data: [imageURL] };
         } else if (
-            runtime.character.modelProvider === ModelProviderName.LLAMACLOUD
+            imageModelProvider === ModelProviderName.LLAMACLOUD
         ) {
             const together = new Together({ apiKey: apiKey as string });
             const response = await together.images.create({
-                model: "black-forest-labs/FLUX.1-schnell",
+                model: runtime.getSetting("TOGETHER_IMAGE_MODEL") ?? "black-forest-labs/FLUX.1-schnell",
                 prompt,
                 width,
                 height,
@@ -827,11 +839,14 @@ export const generateImage = async (
             });
             const urls: string[] = [];
             for (let i = 0; i < response.data.length; i++) {
-                const json = response.data[i].b64_json;
+                //const json = response.data[i].b64_json;
                 // decode base64
-                const base64 = Buffer.from(json, "base64").toString("base64");
-                urls.push(base64);
+                //const base64 = Buffer.from(json, "base64").toString("base64");
+                //urls.push(base64);
+                const data: unknown = response.data
+                urls.push(data[i].url);
             }
+
             const base64s = await Promise.all(
                 urls.map(async (url) => {
                     const response = await fetch(url);
@@ -842,6 +857,7 @@ export const generateImage = async (
                     return base64;
                 })
             );
+
             return { success: true, data: base64s };
         } else {
             let targetSize = `${width}x${height}`;

@@ -1,8 +1,10 @@
 import { Message } from "@telegraf/types";
-import { Context, Telegraf } from "telegraf";
+import { Context, Telegraf, Input } from "telegraf";
 
 import { composeContext, elizaLogger, ServiceType } from "@ai16z/eliza";
 import { embeddingZeroVector } from "@ai16z/eliza";
+import { Media } from "@ai16z/eliza";
+import { elizaLogger } from "@ai16z/eliza";
 import {
     Content,
     HandlerCallback,
@@ -125,10 +127,11 @@ Note that {{agentName}} is capable of reading/seeing/hearing various forms of me
 
 {{recentMessages}}
 
-# Task: Generate a post/reply in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}) while using the thread of tweets as additional context:
+# Task: Generate a reply in the voice and style of {{agentName}}, aka @{{twitterUserName}}
+Write a very short reply that is from the perspective of {{agentName}}. Try to write something totally different than previous posts. Do not add commentary or acknowledge this request, just write the reply. Use the thread of tweets as additional context:
 Current Post:
 {{currentPost}}
-Thread of Tweets You Are Replying To:
+Thread of messages you are replying to:
 
 {{formattedConversation}}
 ` + messageCompletionFooter;
@@ -235,10 +238,18 @@ export class MessageManager {
     private async sendMessageInChunks(
         ctx: Context,
         content: string,
+        attachments?: Media[],
         replyToMessageId?: number
     ): Promise<Message.TextMessage[]> {
         const chunks = this.splitMessage(content);
         const sentMessages: Message.TextMessage[] = [];
+        const hasAttachment = attachments?.length > 0;
+
+        if (hasAttachment) {
+            const sentMessage = (await ctx.replyWithPhoto(Input.fromLocalFile(attachments[0].url)));
+
+            elizaLogger.log("Sent attachment: ", sentMessage);
+        }
 
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
@@ -443,6 +454,7 @@ export class MessageManager {
                     const sentMessages = await this.sendMessageInChunks(
                         ctx,
                         content.text,
+                        content.attachments,
                         message.message_id
                     );
 
