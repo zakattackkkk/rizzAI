@@ -14,15 +14,28 @@ const TWEETS_FILE = "tweets.json";
         // Log in to Twitter using the configured environment variables
         await scraper.login(
             process.env.TWITTER_USERNAME,
-            process.env.TWITTER_PASSWORD
+            process.env.TWITTER_PASSWORD,
+            process.env.TWITTER_EMAIL,
+            process.env.TWITTER_2FA_SECRET,
+            process.env.TWITTER_API_KEY,
+            process.env.TWITTER_API_SECRET_KEY,
+            process.env.TWITTER_ACCESS_TOKEN,
+            process.env.TWITTER_ACCESS_TOKEN_SECRET
         );
 
         // Check if login was successful
         if (await scraper.isLoggedIn()) {
             console.log("Logged in successfully!");
 
+            const hasV2Settings =
+                this.runtime.getSetting("TWITTER_API_KEY") &&
+                this.runtime.getSetting("TWITTER_API_SECRET_KEY") &&
+                this.runtime.getSetting("TWITTER_ACCESS_TOKEN") &&
+                this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET");
             // Fetch all tweets for the user "@realdonaldtrump"
-            const tweets = scraper.getTweets("pmarca", 2000);
+            const tweets = hasV2Settings
+                ? await scraper.getTweetsV2("pmarca", 2000)
+                : await scraper.getTweets("pmarca", 2000);
 
             // Initialize an empty array to store the fetched tweets
             let fetchedTweets = [];

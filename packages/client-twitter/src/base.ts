@@ -138,9 +138,15 @@ export class ClientBase extends EventEmitter {
         if (cachedTweet) {
             return cachedTweet;
         }
-
+        const hasV2Settings =
+            this.runtime.getSetting("TWITTER_API_KEY") &&
+            this.runtime.getSetting("TWITTER_API_SECRET_KEY") &&
+            this.runtime.getSetting("TWITTER_ACCESS_TOKEN") &&
+            this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET");
         const tweet = await this.requestQueue.add(() =>
-            this.twitterClient.getTweet(tweetId)
+            hasV2Settings
+                ? this.twitterClient.getTweetV2(tweetId)
+                : this.twitterClient.getTweet(tweetId)
         );
         await this.cacheTweet(tweet);
         return tweet;
@@ -218,7 +224,11 @@ export class ClientBase extends EventEmitter {
                         this.runtime.getSetting("TWITTER_USERNAME"),
                         this.runtime.getSetting("TWITTER_PASSWORD"),
                         this.runtime.getSetting("TWITTER_EMAIL"),
-                        this.runtime.getSetting("TWITTER_2FA_SECRET")
+                        this.runtime.getSetting("TWITTER_2FA_SECRET"),
+                        this.runtime.getSetting("TWITTER_API_KEY"),
+                        this.runtime.getSetting("TWITTER_API_SECRET_KEY"),
+                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN"),
+                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET")
                     );
                     elizaLogger.log("Logged in to Twitter");
                     const cookies = await this.twitterClient.getCookies();
@@ -241,7 +251,11 @@ export class ClientBase extends EventEmitter {
                         this.runtime.getSetting("TWITTER_USERNAME"),
                         this.runtime.getSetting("TWITTER_PASSWORD"),
                         this.runtime.getSetting("TWITTER_EMAIL"),
-                        this.runtime.getSetting("TWITTER_2FA_SECRET")
+                        this.runtime.getSetting("TWITTER_2FA_SECRET"),
+                        this.runtime.getSetting("TWITTER_API_KEY"),
+                        this.runtime.getSetting("TWITTER_API_SECRET_KEY"),
+                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN"),
+                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET")
                     );
 
                     const cookies = await this.twitterClient.getCookies();

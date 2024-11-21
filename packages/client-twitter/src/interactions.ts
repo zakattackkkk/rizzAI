@@ -490,10 +490,9 @@ export class TwitterInteractionClient extends ClientBase {
                     currentTweet.inReplyToStatusId
                 );
                 try {
-                    const parentTweet = await this.twitterClient.getTweet(
+                    const parentTweet = await this.getTweet(
                         currentTweet.inReplyToStatusId
                     );
-
                     if (parentTweet) {
                         console.log("Found parent tweet:", {
                             id: parentTweet.id,

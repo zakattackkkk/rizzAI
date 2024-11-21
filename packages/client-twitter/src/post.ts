@@ -159,35 +159,51 @@ export class TwitterPostClient extends ClientBase {
             // Use the helper function to truncate to complete sentence
             const content = truncateToCompleteSentence(formattedTweet);
 
-            if (this.runtime.getSetting("TWITTER_DRY_RUN") === 'true') {
-                elizaLogger.info(`Dry run: would have posted tweet: ${content}`);
+            if (this.runtime.getSetting("TWITTER_DRY_RUN") === "true") {
+                elizaLogger.info(
+                    `Dry run: would have posted tweet: ${content}`
+                );
                 return;
             }
 
             try {
-                const result = await this.requestQueue.add(
-                    async () => await this.twitterClient.sendTweet(content)
-                );
-                const body = await result.json();
-                const tweetResult = body.data.create_tweet.tweet_results.result;
+                let tweet: Tweet;
+                const hasV2Settings =
+                    this.runtime.getSetting("TWITTER_API_KEY") &&
+                    this.runtime.getSetting("TWITTER_API_SECRET_KEY") &&
+                    this.runtime.getSetting("TWITTER_ACCESS_TOKEN") &&
+                    this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET");
+                if (hasV2Settings) {
+                    // v2 logic
+                    tweet = await this.requestQueue.add(
+                        async () =>
+                            await this.twitterClient.sendTweetV2(content)
+                    );
+                } else {
+                    const result = await this.requestQueue.add(
+                        async () => await this.twitterClient.sendTweet(content)
+                    );
+                    const body = await result.json();
+                    const tweetResult =
+                        body.data.create_tweet.tweet_results.result;
 
-                const tweet = {
-                    id: tweetResult.rest_id,
-                    text: tweetResult.legacy.full_text,
-                    conversationId: tweetResult.legacy.conversation_id_str,
-                    createdAt: tweetResult.legacy.created_at,
-                    userId: tweetResult.legacy.user_id_str,
-                    inReplyToStatusId:
-                        tweetResult.legacy.in_reply_to_status_id_str,
-                    permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
-                    hashtags: [],
-                    mentions: [],
-                    photos: [],
-                    thread: [],
-                    urls: [],
-                    videos: [],
-                } as Tweet;
-
+                    tweet = {
+                        id: tweetResult.rest_id,
+                        text: tweetResult.legacy.full_text,
+                        conversationId: tweetResult.legacy.conversation_id_str,
+                        createdAt: tweetResult.legacy.created_at,
+                        userId: tweetResult.legacy.user_id_str,
+                        inReplyToStatusId:
+                            tweetResult.legacy.in_reply_to_status_id_str,
+                        permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
+                        hashtags: [],
+                        mentions: [],
+                        photos: [],
+                        thread: [],
+                        urls: [],
+                        videos: [],
+                    } as Tweet;
+                }
                 const postId = tweet.id;
                 const conversationId =
                     tweet.conversationId + "-" + this.runtime.agentId;
