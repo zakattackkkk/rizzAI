@@ -921,6 +921,9 @@ export const generateObjectV2 = async ({
 
     const provider = runtime.modelProvider;
     const model = models[provider].model[modelClass];
+    if (!model) {
+        throw new Error(`Unsupported model class: ${modelClass}`);
+    }
     const temperature = models[provider].settings.temperature;
     const frequency_penalty = models[provider].settings.frequency_penalty;
     const presence_penalty = models[provider].settings.presence_penalty;
