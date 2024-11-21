@@ -111,11 +111,13 @@ export class TwitterPostClient extends ClientBase {
 
             let homeTimeline = [];
 
+            elizaLogger.log("POST_NEW_TWEET - getting cached timeline");
             const cachedTimeline = await this.getCachedTimeline();
 
             if (cachedTimeline) {
                 homeTimeline = cachedTimeline;
             } else {
+                elizaLogger.log("POST_NEW_TWEET - fetching home timeline");
                 homeTimeline = await this.fetchHomeTimeline(50);
                 this.cacheTimeline(homeTimeline);
             }
@@ -128,6 +130,7 @@ export class TwitterPostClient extends ClientBase {
                     })
                     .join("\n");
 
+            elizaLogger.log("POST_NEW_TWEET - composing state");
             const state = await this.runtime.composeState(
                 {
                     userId: this.runtime.agentId,
@@ -149,12 +152,14 @@ export class TwitterPostClient extends ClientBase {
                     twitterPostTemplate,
             });
 
+            elizaLogger.log("POST_NEW_TWEET - generating text");
             const newTweetContent = await generateText({
                 runtime: this.runtime,
                 context,
                 modelClass: ModelClass.SMALL,
             });
 
+            elizaLogger.log("POST_NEW_TWEET - formatting tweet");
             // Replace \n with proper line breaks and trim excess spaces
             const formattedTweet = newTweetContent
                 .replaceAll(/\\n/g, "\n")
@@ -163,12 +168,14 @@ export class TwitterPostClient extends ClientBase {
             // Use the helper function to truncate to complete sentence
             const content = truncateToCompleteSentence(formattedTweet);
 
+            elizaLogger.info(`Dry run: would have posted tweet: ${content}`);
             if (this.runtime.getSetting("TWITTER_DRY_RUN") === 'true') {
                 elizaLogger.info(`Dry run: would have posted tweet: ${content}`);
                 return;
             }
 
             try {
+                elizaLogger.log("POST_NEW_TWEET - sending tweet");
                 const result = await this.requestQueue.add(
                     async () => await this.twitterClient.sendTweet(content)
                 );

@@ -420,77 +420,82 @@ export class ClientBase extends EventEmitter {
     async fetchHomeTimeline(count: number): Promise<Tweet[]> {
         await this.ensureReady();
         return await this.executeWithTokenRefresh(async () => {
-            // Use v1 API for home timeline as recommended
-            const homeTimeline = await this.twitterClient.v1.homeTimeline({
-                count,
-                tweet_mode: 'extended'
+
+            try{
+            
+            const homeTimelineResult = await this.twitterClient.v2.homeTimeline({
+                "tweet.fields": [
+                    "created_at",
+                    "conversation_id",
+                    "in_reply_to_user_id",
+                    "entities",
+                    "attachments",
+                    "referenced_tweets",
+                    "text"
+                ],
+                "user.fields": ["name", "username"],
+                "expansions": [
+                    "author_id",
+                    "attachments.media_keys",
+                    "referenced_tweets.id",
+                    "entities.mentions.username"
+                ],
+                "media.fields": [
+                    "url",
+                    "type",
+                    "preview_image_url",
+                    "alt_text"
+                ],
+                max_results: count // Adjust the value as needed
             });
 
-            return homeTimeline.tweets.map(tweet => ({
-                id: tweet.id_str,
-                text: tweet.full_text || tweet.text,
-                conversationId: tweet.id_str,
-                createdAt: tweet.created_at,
-                userId: tweet.user.id_str,
-                inReplyToStatusId: tweet.in_reply_to_status_id_str,
-                permanentUrl: `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}`,
-                username: tweet.user.screen_name,
-                name: tweet.user.name,
-                hashtags: tweet.entities.hashtags || [],
-                mentions: tweet.entities.user_mentions || [],
-                photos: tweet.entities.media?.filter(media => media.type === 'photo') || [],
+            console.log('Fetched homeTimeline successfully');
 
-                thread: [
-                ...(tweet.in_reply_to_status_id_str ? [{
-                    type: 'reply' as const,
-                    tweet: null as any // Will be populated later if needed
-                }] : []),
-                ...(tweet.retweeted_status ? [{
-                    type: 'retweet' as const,
-                    tweet: {
-                        id: tweet.retweeted_status.id_str,
-                        text: tweet.retweeted_status.full_text || tweet.retweeted_status.text,
-                        conversationId: tweet.retweeted_status.id_str,
-                        createdAt: tweet.retweeted_status.created_at,
-                        userId: tweet.retweeted_status.user.id_str,
-                        permanentUrl: `https://twitter.com/${tweet.retweeted_status.user.screen_name}/status/${tweet.retweeted_status.id_str}`,
-                        username: tweet.retweeted_status.user.screen_name,
-                        name: tweet.retweeted_status.user.name,
-                        hashtags: tweet.retweeted_status.entities.hashtags || [],
-                        mentions: tweet.retweeted_status.entities.user_mentions || [],
-                        photos: tweet.retweeted_status.entities.media?.filter(media => media.type === 'photo') || [],
+            const tweets = homeTimelineResult.data.data; 
+
+            // Check if the data property exists and is an array
+            if (!Array.isArray(tweets)) {
+                throw new Error('Expected tweets to be an array, but got:', tweets);
+            }
+
+            const mappedTweets:Tweet[] = [];
+
+
+            tweets.forEach(tweet => {
+                // Error handling for missing properties
+                try {
+                    mappedTweets.push({
+                        id: tweet.id,
+                        text: tweet.text,
+                        conversationId: tweet.conversation_id || null,
+                        createdAt: tweet.created_at,
+                        userId: tweet.author_id,
+                        inReplyToStatusId: tweet.in_reply_to_user_id || null,
+                        permanentUrl: `https://twitter.com/${tweet.author_id}/status/${tweet.id}`,
+                        username: null, // Assuming username is available in the response
+                        name:  null, // Assuming name is available in the response
+                        hashtags: tweet.entities?.hashtags || [],
+                        mentions: tweet.entities?.mentions || [],
+                        photos: [],
+                        
+                        // Populate the thread property
                         thread: [],
-                        urls: tweet.retweeted_status.entities.urls?.map(url => url.expanded_url) || [],
-                        videos: tweet.retweeted_status.entities.media?.filter(media => media.type === 'video') || [],
-                        timestamp: new Date(tweet.retweeted_status.created_at).getTime() / 1000
-                    }
-                }] : []),
-                ...(tweet.quoted_status ? [{
-                    type: 'quote' as const,
-                    tweet: {
-                        id: tweet.quoted_status.id_str,
-                        text: tweet.quoted_status.full_text || tweet.quoted_status.text,
-                        conversationId: tweet.quoted_status.id_str,
-                        createdAt: tweet.quoted_status.created_at,
-                        userId: tweet.quoted_status.user.id_str,
-                        permanentUrl: `https://twitter.com/${tweet.quoted_status.user.screen_name}/status/${tweet.quoted_status.id_str}`,
-                        username: tweet.quoted_status.user.screen_name,
-                        name: tweet.quoted_status.user.name,
-                        hashtags: tweet.quoted_status.entities.hashtags || [],
-                        mentions: tweet.quoted_status.entities.user_mentions || [],
-                        photos: tweet.quoted_status.entities.media?.filter(media => media.type === 'photo') || [],
-                        thread: [],
-                        urls: tweet.quoted_status.entities.urls?.map(url => url.expanded_url) || [],
-                        videos: tweet.quoted_status.entities.media?.filter(media => media.type === 'video') || [],
-                        timestamp: new Date(tweet.quoted_status.created_at).getTime() / 1000
-                    }
-                }] : [])
-            ],
-                
-                urls: tweet.entities.urls?.map(url => url.expanded_url) || [],
-                videos: tweet.entities.media?.filter(media => media.type === 'video') || [],
-                timestamp: tweet.created_at ? new Date(tweet.created_at).getTime() / 1000 : Date.now() / 1000
-            }));
+                        
+                        urls: tweet.entities?.urls?.map(url => url.expanded_url) || [],
+                        videos: [],
+                        timestamp: new Date(tweet.created_at).getTime() / 1000
+                    });
+                } catch (err) {
+                    console.error('Error mapping tweet:', err);
+                }
+            });
+
+            return mappedTweets;
+
+            } catch (error) {
+                console.error('Error fetching home timeline:', error);
+                throw error;
+            }
         });
     }
 

@@ -5,13 +5,7 @@ import { DiscordClientInterface } from "@ai16z/client-discord";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
-<<<<<<< HEAD:packages/agent/src/index.ts
 import { TwitterAPIClientInterface } from "@ai16z/client-twitter-api";
-import { defaultCharacter } from "@ai16z/eliza";
-import { AgentRuntime } from "@ai16z/eliza";
-import { settings } from "@ai16z/eliza";
-=======
->>>>>>> main:agent/src/index.ts
 import {
     DbCacheAdapter,
     defaultCharacter,
@@ -37,7 +31,7 @@ import readline from "readline";
 import yargs from "yargs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { character } from "./character";
+import { character } from "./character.ts";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -115,7 +109,7 @@ export async function loadCharacters(
 
     if (loadedCharacters.length === 0) {
         console.log("No characters found, using default character");
-        loadedCharacters.push(defaultCharacter);
+        loadedCharacters.push(character);
     }
 
     return loadedCharacters;
@@ -314,7 +308,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
 }
 
 const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
+    const directClient: DirectClient = await DirectClientInterface.start() as DirectClient;
     const args = parseArguments();
 
     let charactersArg = args.characters || args.character;

@@ -102,13 +102,15 @@ export class TwitterPostClient extends ClientBase {
             );
 
             let homeTimeline = [];
-
+            
             if (!fs.existsSync("tweetcache")) fs.mkdirSync("tweetcache");
             if (fs.existsSync("tweetcache/home_timeline.json")) {
                 homeTimeline = JSON.parse(
                     fs.readFileSync("tweetcache/home_timeline.json", "utf-8")
                 );
+                console.log("POST_NEW_TWEET -cached home timeline present");
             } else {
+                console.log("POST_NEW_TWEET -fetching home timeline");
                 homeTimeline = await this.fetchHomeTimeline(50);
                 fs.writeFileSync(
                     "tweetcache/home_timeline.json",
@@ -123,6 +125,7 @@ export class TwitterPostClient extends ClientBase {
                         return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})${tweet.inReplyToStatusId ? ` In reply to: ${tweet.inReplyToStatusId}` : ""}\nText: ${tweet.text}\n---\n`;
                     })
                     .join("\n");
+            console.log("POST_NEW_TWEET -composing state");
 
             const state = await this.runtime.composeState(
                 {
@@ -137,6 +140,7 @@ export class TwitterPostClient extends ClientBase {
                     timeline: formattedHomeTimeline,
                 }
             );
+            console.log("POST_NEW_TWEET -composing context");
 
             const context = composeContext({
                 state,
@@ -144,7 +148,7 @@ export class TwitterPostClient extends ClientBase {
                     this.runtime.character.templates?.twitterPostTemplate ||
                     twitterPostTemplate,
             });
-
+            console.log("POST_NEW_TWEET -generating text");
             const newTweetContent = await generateText({
                 runtime: this.runtime,
                 context,
@@ -159,6 +163,7 @@ export class TwitterPostClient extends ClientBase {
             // Use the helper function to truncate to complete sentence
             const content = truncateToCompleteSentence(formattedTweet);
 
+            console.log("POST_NEW_TWEET -sending tweet");
             try {
                 const tweetResponse = await this.requestQueue.add(
                     async () => await this.twitterClient.v2.tweet(content)
@@ -167,6 +172,9 @@ export class TwitterPostClient extends ClientBase {
                     throw new Error("Failed to create tweet");
                 }
 
+                console.log("POST_NEW_TWEET -tweet created with tweet id", tweetResponse.data.id);
+
+                console.log("POST_NEW_TWEET -getting tweet details");
                 const tweetDetails = await this.twitterClient.v2.singleTweet( tweetResponse.data.id,
                     {
                         "tweet.fields": [
@@ -194,6 +202,7 @@ export class TwitterPostClient extends ClientBase {
                     }
                 );
 
+                console.log("POST_NEW_TWEET -mapping tweet");
                 const tweet: Tweet = {
                     id: tweetDetails.data.id,
                     text: content,
@@ -217,14 +226,18 @@ export class TwitterPostClient extends ClientBase {
                     tweet.conversationId + "-" + this.runtime.agentId;
                 const roomId = stringToUuid(conversationId);
 
+                console.log("POST_NEW_TWEET -ensuring room exists");
                 await this.runtime.ensureRoomExists(roomId);
+                console.log("POST_NEW_TWEET -ensuring participant in room");
                 await this.runtime.ensureParticipantInRoom(
                     this.runtime.agentId,
                     roomId
                 );
 
+                console.log("POST_NEW_TWEET -caching tweet");
                 await this.cacheTweet(tweet);
 
+                console.log("POST_NEW_TWEET -creating memory");
                 await this.runtime.messageManager.createMemory({
                     id: stringToUuid(postId + "-" + this.runtime.agentId),
                     userId: this.runtime.agentId,
@@ -237,7 +250,8 @@ export class TwitterPostClient extends ClientBase {
                     roomId,
                     embedding: embeddingZeroVector,
                     createdAt: tweet.timestamp * 1000,
-                });
+                }); 
+                console.log("POST_NEW_TWEET -done");
             } catch (error) {
                 console.error("Error sending tweet:", error);
             }

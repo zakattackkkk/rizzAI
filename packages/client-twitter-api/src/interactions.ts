@@ -73,7 +73,9 @@ export class TwitterInteractionClient extends ClientBase {
             this.handleTwitterInteractions();
             setTimeout(
                 handleTwitterInteractionsLoop,
-                (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
+                (Math.floor(Math.random() * (60 - 15 + 1)) + 15) * 60 * 1000
+                // Random interval between 15-60 minutes
+                // (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
             ); // Random interval between 2-5 minutes
         };
         handleTwitterInteractionsLoop();
@@ -212,39 +214,53 @@ export class TwitterInteractionClient extends ClientBase {
         let homeTimeline = [];
         // read the file if it exists
         if (fs.existsSync("tweetcache/home_timeline.json")) {
+            console.log("INTERACTION_TWITTER home timeline exists, reading");
             homeTimeline = JSON.parse(
                 fs.readFileSync("tweetcache/home_timeline.json", "utf-8")
             );
         } else {
+            console.log("INTERACTION_TWITTER home timeline fetching");
             homeTimeline = await this.fetchHomeTimeline(50);
             fs.writeFileSync(
                 "tweetcache/home_timeline.json",
                 JSON.stringify(homeTimeline, null, 2)
             );
+            console.log("INTERACTION_TWITTER home timeline fetched");
         }
 
+        console.log("INTERACTION_TWITTER formatting home timeline");
+        console.log(`INTERACTION_TWITTER current_home_timeline ${homeTimeline}`);
         const formattedHomeTimeline =
+            Array.isArray(homeTimeline) ?
             `# ${this.runtime.character.name}'s Home Timeline\n\n` +
             homeTimeline
                 .map((tweet) => {
                     return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})${tweet.inReplyToStatusId ? ` In reply to: ${tweet.inReplyToStatusId}` : ""}\nText: ${tweet.text}\n---\n`;
                 })
-                .join("\n");
+                .join("\n") :
+            "";
+            console.log(`INTERACTION_TWITTER formatted home timeline`);
 
+
+        console.log("INTERACTION_TWITTER composing state");
         let state = await this.runtime.composeState(message, {
             twitterClient: this.twitterClient,
             twitterUserName: this.twitterUsername,
             currentPost,
             timeline: formattedHomeTimeline,
         });
+        console.log("INTERACTION_TWITTER composed state");
 
+
+        console.log("INTERACTION_TWITTER tweet id");
         // check if the tweet exists, save if it doesn't
         const tweetId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
         const tweetExists =
             await this.runtime.messageManager.getMemoryById(tweetId);
 
+        console.log("INTERACTION_TWITTER tweet exists");
         if (!tweetExists) {
-            console.log("tweet does not exist, saving");
+            console.log("INTERACTION_TWITTER tweet does not exist, saving");
             const userIdUUID = stringToUuid(tweet.userId as string);
             const roomId = stringToUuid(tweet.conversationId);
 
@@ -267,8 +283,10 @@ export class TwitterInteractionClient extends ClientBase {
                 createdAt: tweet.timestamp * 1000,
             };
             this.saveRequestMessage(message, state);
+            console.log("INTERACTION_TWITTER tweet does not exist, saved");
         }
 
+        console.log("INTERACTION_TWITTER composing context");
         const shouldRespondContext = composeContext({
             state,
             template:
@@ -277,12 +295,15 @@ export class TwitterInteractionClient extends ClientBase {
                 this.runtime.character?.templates?.shouldRespondTemplate ||
                 twitterShouldRespondTemplate,
         });
+        console.log("INTERACTION_TWITTER composed context");
 
+        
         const shouldRespond = await generateShouldRespond({
             runtime: this.runtime,
             context: shouldRespondContext,
             modelClass: ModelClass.SMALL,
         });
+        
 
         if (!shouldRespond) {
             console.log("Not responding to message");
@@ -298,11 +319,13 @@ export class TwitterInteractionClient extends ClientBase {
                 twitterMessageHandlerTemplate,
         });
 
+        console.log("INTERACTION_TWITTER generating text");
         const response = await generateMessageResponse({
             runtime: this.runtime,
             context,
             modelClass: ModelClass.SMALL,
         });
+        console.log("INTERACTION_TWITTER generated text");
 
         const stringId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
 
