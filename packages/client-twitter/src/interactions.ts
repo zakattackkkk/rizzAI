@@ -82,12 +82,17 @@ Thread of Tweets You Are Replying To:
 
 export class TwitterInteractionClient extends ClientBase {
     onReady() {
-        const handleTwitterInteractionsLoop = () => {
-            this.handleTwitterInteractions();
-            setTimeout(
-                handleTwitterInteractionsLoop,
-                (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
-            ); // Random interval between 2-5 minutes
+        const handleTwitterInteractionsLoop = async () => {
+            try {
+                await this.handleTwitterInteractions();
+            } catch (error) {
+                console.error("Error in Twitter interaction loop:", error);
+            } finally {
+                setTimeout(
+                    handleTwitterInteractionsLoop,
+                    (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000 // Random interval between 2-5 minutes
+                );
+            }
         };
         handleTwitterInteractionsLoop();
     }
@@ -102,7 +107,7 @@ export class TwitterInteractionClient extends ClientBase {
         elizaLogger.log("Checking Twitter interactions");
         try {
             // Check for mentions
-            const tweetCandidates = (
+            const tweets = (
                 await this.fetchSearchTweets(
                     `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
                     20,
@@ -110,45 +115,56 @@ export class TwitterInteractionClient extends ClientBase {
                 )
             ).tweets;
 
-            // de-duplicate tweetCandidates with a set
-            const uniqueTweetCandidates = [...new Set(tweetCandidates)];
+            const tweetCandidates = this.filterValidTweets(tweets);
+            const groupedTweets =
+                this.groupTweetsByConversation(tweetCandidates);
 
-            // Sort tweet candidates by ID in ascending order
-            uniqueTweetCandidates
-                .sort((a, b) => a.id.localeCompare(b.id))
-                .filter((tweet) => tweet.userId !== this.twitterUserId);
+            for (const [conversationId, tweets] of Object.entries(
+                groupedTweets
+            )) {
+                await this.handleConversation(conversationId, tweets);
+            }
+        } catch (error) {
+            console.error("Error while handling Twitter interactions:", error);
+        }
+    }
 
-            // for each tweet candidate, handle the tweet
-            for (const tweet of uniqueTweetCandidates) {
-                // console.log("tweet:", tweet);
-                if (
-                    !this.lastCheckedTweetId ||
-                    parseInt(tweet.id) > this.lastCheckedTweetId
-                ) {
-                    const conversationId =
-                        tweet.conversationId + "-" + this.runtime.agentId;
+    filterValidTweets(tweets: Tweet[]): Tweet[] {
+        const seenIds = new Set();
+        return tweets
+            .filter(
+                (tweet) =>
+                    tweet.userId !== this.twitterUserId && // Exclude bot's tweets
+                    tweet.text && // Exclude empty tweets
+                    !seenIds.has(tweet.id) // Exclude duplicate tweets
+            )
+            .map((tweet) => {
+                seenIds.add(tweet.id);
+                return tweet;
+            });
+    }
 
-                    const roomId = stringToUuid(conversationId);
+    groupTweetsByConversation(tweets: Tweet[]): Record<string, Tweet[]> {
+        return tweets.reduce((acc, tweet) => {
+            const key = `${tweet.conversationId}-${this.runtime.agentId}`;
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(tweet);
+            return acc;
+        }, {});
+    }
 
-                    const userIdUUID = stringToUuid(tweet.userId as string);
+    async handleConversation(conversationId: string, tweets: Tweet[]) {
+        try {
+            const roomId = stringToUuid(conversationId);
+            for (const tweet of tweets) {
+                const userIdUUID = stringToUuid(tweet.userId as string);
 
-                    await this.runtime.ensureConnection(
-                        userIdUUID,
-                        roomId,
-                        tweet.username,
-                        tweet.name,
-                        "twitter"
-                    );
-
-                    const thread = await buildConversationThread(tweet, this);
-
-                    const message = {
-                        content: { text: tweet.text },
-                        agentId: this.runtime.agentId,
-                        userId: userIdUUID,
-                        roomId,
-                    };
-
+                await this.runtime.ensureConnection(
+                    userIdUUID,
+                    roomId,
+                    tweet.username,
+                    tweet.name,
+                    "twitter"
                     await this.handleTweet({
                         tweet,
                         message,
@@ -189,12 +205,38 @@ export class TwitterInteractionClient extends ClientBase {
                     "Error saving latest checked tweet ID to file:",
                     error
                 );
-            }
 
+
+                const thread = await buildConversationThread(tweet, this);
+
+                const message = {
+                    content: { text: tweet.text },
+                    agentId: this.runtime.agentId,
+                    userId: userIdUUID,
+                    roomId,
+                };
+
+                await this.handleTweet({ tweet, message, thread });
+                this.updateLastCheckedTweetId(tweet.id);
+            }
+        } catch (error) {
+            elizaLogger.error(
+                `Error processing conversation ${conversationId}:`,
+                error
+            );
             elizaLogger.log("Finished checking Twitter interactions");
         } catch (error) {
             elizaLogger.error("Error handling Twitter interactions:", error);
         }
+    }
+
+    updateLastCheckedTweetId(tweetId: string) {
+        this.lastCheckedTweetId = parseInt(tweetId, 10);
+        fs.writeFileSync(
+            this.tweetCacheFilePath,
+            this.lastCheckedTweetId.toString(),
+            "utf-8"
+        );
     }
 
     private async handleTweet({
@@ -399,6 +441,19 @@ export class TwitterInteractionClient extends ClientBase {
                 elizaLogger.error(`Error sending response tweet: ${error}`);
             }
         }
+
+        // Need to bind this context for the inner function
+        await processThread.bind(this)(tweet, 0);
+
+        elizaLogger.debug("Final thread built:", {
+            totalTweets: thread.length,
+            tweetIds: thread.map((t) => ({
+                id: t.id,
+                text: t.text?.slice(0, 50),
+            })),
+        });
+
+        return thread;
     }
 
     async buildConversationThread(
