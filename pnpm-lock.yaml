@@ -432,6 +432,9 @@ importers:
       whatwg-url:
         specifier: 7.1.0
         version: 7.1.0
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -476,6 +479,9 @@ importers:
       telegraf:
         specifier: 4.16.3
         version: 4.16.3(encoding@0.1.13)
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -495,6 +501,9 @@ importers:
       whatwg-url:
         specifier: 7.1.0
         version: 7.1.0
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -24410,7 +24419,7 @@ snapshots:
 
   log-symbols@4.1.0:
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       is-unicode-supported: 0.1.0
 
   log-symbols@6.0.0:
