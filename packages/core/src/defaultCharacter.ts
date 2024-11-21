@@ -4,7 +4,7 @@ export const defaultCharacter: Character = {
     name: "Eliza",
     username: "eliza",
     plugins: [],
-    clients: [Clients.TWITTER_API],
+    clients: [Clients.TWITTER],
     modelProvider: ModelProviderName.OPENAI,
     settings: {
         secrets: {},

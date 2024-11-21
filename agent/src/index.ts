@@ -22,6 +22,7 @@ import {
     settings,
     IDatabaseAdapter,
     validateCharacterConfig,
+    UUID,
 } from "@ai16z/eliza";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
 import { solanaPlugin } from "@ai16z/plugin-solana";
@@ -41,11 +42,21 @@ const __filename = fileURLToPath(import.meta.url); // get the resolved path to t
 const __dirname = path.dirname(__filename); // get the name of the directory
 
 interface dbCharacter {
-    id: string;
+    id: UUID;
     name: string;
     character_data: object;
-    twitter_access_token?: string;
-    twitter_refresh_token?: string;
+    twitter_username?: string;
+    twitter_password?: string;
+    twitter_email?: string;
+    coin_chart?: string;
+    wallet_chain?: string;
+    image?: string;
+    description?: string;
+    website?:string;
+    telegram?:string;
+    ticker?:string;
+    contract_address?:string;
+    wallet_address?:string;
 }
 
 export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
@@ -158,7 +169,7 @@ export async function loadDBCharacters(
         for (const id of characterIds) {
             try {
                 const { rows } = await (await client.query(
-                    "SELECT * FROM characters WHERE id = $1",
+                    "SELECT * FROM agents WHERE id = $1",
                     [id]
                 ));
                 console.log("----------");
