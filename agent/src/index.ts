@@ -5,6 +5,8 @@ import { DiscordClientInterface } from "@ai16z/client-discord";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
+// import { TerminalClientInterface } from "@ai16z/client-terminal";
+import { TerminalClientInterface } from "../../packages/client-terminal/dist/index.js";
 import {
     defaultCharacter,
     AgentRuntime,
@@ -19,15 +21,10 @@ import { solanaPlugin } from "@ai16z/plugin-solana";
 import { nodePlugin } from "@ai16z/plugin-node";
 import Database from "better-sqlite3";
 import fs from "fs";
-import readline from "readline";
 import yargs from "yargs";
-import { character } from "./character.ts";
 
-export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
-    const waitTime =
-        Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
-    return new Promise((resolve) => setTimeout(resolve, waitTime));
-};
+import { getTokenForProvider } from "./libs/utils.ts";
+import { character } from "./character.ts";
 
 export function parseArguments(): {
     character?: string;
@@ -102,62 +99,6 @@ export async function loadCharacters(
     return loadedCharacters;
 }
 
-export function getTokenForProvider(
-    provider: ModelProviderName,
-    character: Character
-) {
-    switch (provider) {
-        case ModelProviderName.OPENAI:
-            return (
-                character.settings?.secrets?.OPENAI_API_KEY ||
-                settings.OPENAI_API_KEY
-            );
-        case ModelProviderName.LLAMACLOUD:
-            return (
-                character.settings?.secrets?.LLAMACLOUD_API_KEY ||
-                settings.LLAMACLOUD_API_KEY ||
-                character.settings?.secrets?.TOGETHER_API_KEY ||
-                settings.TOGETHER_API_KEY ||
-                character.settings?.secrets?.XAI_API_KEY ||
-                settings.XAI_API_KEY ||
-                character.settings?.secrets?.OPENAI_API_KEY ||
-                settings.OPENAI_API_KEY
-            );
-        case ModelProviderName.ANTHROPIC:
-            return (
-                character.settings?.secrets?.ANTHROPIC_API_KEY ||
-                character.settings?.secrets?.CLAUDE_API_KEY ||
-                settings.ANTHROPIC_API_KEY ||
-                settings.CLAUDE_API_KEY
-            );
-        case ModelProviderName.REDPILL:
-            return (
-                character.settings?.secrets?.REDPILL_API_KEY ||
-                settings.REDPILL_API_KEY
-            );
-        case ModelProviderName.OPENROUTER:
-            return (
-                character.settings?.secrets?.OPENROUTER ||
-                settings.OPENROUTER_API_KEY
-            );
-        case ModelProviderName.GROK:
-            return (
-                character.settings?.secrets?.GROK_API_KEY ||
-                settings.GROK_API_KEY
-            );
-        case ModelProviderName.HEURIST:
-            return (
-                character.settings?.secrets?.HEURIST_API_KEY ||
-                settings.HEURIST_API_KEY
-            );
-        case ModelProviderName.GROQ:
-            return (
-                character.settings?.secrets?.GROQ_API_KEY ||
-                settings.GROQ_API_KEY
-            );
-    }
-}
-
 function initializeDatabase() {
     if (process.env.POSTGRES_URL) {
         return new PostgresDatabaseAdapter({
@@ -175,6 +116,20 @@ export async function initializeClients(
     const clients = [];
     const clientTypes =
         character.clients?.map((str) => str.toLowerCase()) || [];
+
+    if (clientTypes.includes("direct")) {
+        const directClient = await DirectClientInterface.start(runtime);
+
+        if (directClient) {
+            directClient.registerAgent(runtime);
+            clients.push(directClient);
+        }
+    }
+
+    if (clientTypes.includes("terminal")) {
+        const terminalClient = await TerminalClientInterface.start(runtime);
+        if (terminalClient) clients.push(terminalClient);
+    }
 
     if (clientTypes.includes("auto")) {
         const autoClient = await AutoClientInterface.start(runtime);
@@ -227,7 +182,9 @@ export async function createAgent(
         plugins: [
             bootstrapPlugin,
             nodePlugin,
-            character.settings.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
+            character.settings.secrets?.WALLET_PUBLIC_KEY
+                ? solanaPlugin
+                : undefined,
         ].filter(Boolean),
         providers: [],
         actions: [],
@@ -236,7 +193,7 @@ export async function createAgent(
     });
 }
 
-async function startAgent(character: Character, directClient: any) {
+async function startAgent(character: Character) {
     try {
         const token = getTokenForProvider(character.modelProvider, character);
         const db = initializeDatabase();
@@ -247,8 +204,6 @@ async function startAgent(character: Character, directClient: any) {
             character,
             runtime as IAgentRuntime
         );
-
-        directClient.registerAgent(await runtime);
 
         return clients;
     } catch (error) {
@@ -261,7 +216,6 @@ async function startAgent(character: Character, directClient: any) {
 }
 
 const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
     const args = parseArguments();
 
     let charactersArg = args.characters || args.character;
@@ -274,61 +228,14 @@ const startAgents = async () => {
 
     try {
         for (const character of characters) {
-            await startAgent(character, directClient);
+            await startAgent(character);
         }
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
     }
-
-    function chat() {
-        const agentId = characters[0].name ?? "Agent";
-        rl.question("You: ", async (input) => {
-            await handleUserInput(input, agentId);
-            if (input.toLowerCase() !== "exit") {
-                chat(); // Loop back to ask another question
-            }
-        });
-    }
-
-    elizaLogger.log("Chat started. Type 'exit' to quit.");
-    chat();
 };
 
 startAgents().catch((error) => {
     elizaLogger.error("Unhandled error in startAgents:", error);
     process.exit(1); // Exit the process after logging
 });
-
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-});
-
-async function handleUserInput(input, agentId) {
-    if (input.toLowerCase() === "exit") {
-        rl.close();
-        return;
-    }
-
-    try {
-        const serverPort = parseInt(settings.SERVER_PORT || "3000");
-
-        const response = await fetch(
-            `http://localhost:${serverPort}/${agentId}/message`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    text: input,
-                    userId: "user",
-                    userName: "User",
-                }),
-            }
-        );
-
-        const data = await response.json();
-        data.forEach((message) => console.log(`${"Agent"}: ${message.text}`));
-    } catch (error) {
-        console.error("Error fetching response:", error);
-    }
-}
