@@ -326,7 +326,13 @@ export enum Clients {
     DIRECT = "direct",
     TWITTER = "twitter",
     TELEGRAM = "telegram",
+    AUTO = "auto",
 }
+
+export type Operator = {
+    client: Clients;
+    name: string;
+};
 
 export type Character = {
     id?: UUID; // optional UUID which can be passed down to identify the character
@@ -352,6 +358,7 @@ export type Character = {
         discordShouldRespondTemplate?: string;
         discordMessageHandlerTemplate?: string;
     };
+    operators?: Operator[]; // list of operators the character can interact with
     bio: string | string[];
     lore: string[];
     messageExamples: MessageExample[][];
