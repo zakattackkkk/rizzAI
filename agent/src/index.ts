@@ -33,10 +33,20 @@ import yargs from "yargs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { character } from "./character.ts";
+//Nav
+import pg, { type Client } from "pg";
 import type { DirectClient } from "@ai16z/client-direct";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
+
+interface dbCharacter {
+    id: string;
+    name: string;
+    character_data: object;
+    twitter_access_token?: string;
+    twitter_refresh_token?: string;
+}
 
 export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
     const waitTime =
@@ -47,6 +57,8 @@ export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
 export function parseArguments(): {
     character?: string;
     characters?: string;
+    dbCharacter?: string;
+
 } {
     try {
         return yargs(process.argv.slice(2))
@@ -58,6 +70,11 @@ export function parseArguments(): {
                 type: "string",
                 description:
                     "Comma separated list of paths to character JSON files",
+            })
+            .option("dbCharacter", {
+                type: "string",
+                description:
+                    "DB Character ID",
             })
             .parseSync();
     } catch (error) {
@@ -113,6 +130,74 @@ export async function loadCharacters(
     if (loadedCharacters.length === 0) {
         console.log("No characters found, using default character");
         loadedCharacters.push(character);
+    }
+
+    return loadedCharacters;
+}
+
+
+export async function loadDBCharacters(
+    charactersArg: string
+): Promise<Character[]> {
+    console.log(charactersArg);
+    let characterIds = charactersArg
+        ?.split(",")
+        .map((path) => path.trim());
+
+    console.log(characterIds);
+    const loadedCharacters = [];
+
+    if (characterIds?.length > 0 && process.env.POSTGRES_MASTER_URL) {
+        const { Client } = pg;
+
+        const client = new Client({
+            connectionString: process.env.POSTGRES_MASTER_URL
+        });
+        await client.connect();
+        
+        for (const id of characterIds) {
+            try {
+                const { rows } = await (await client.query(
+                    "SELECT * FROM characters WHERE id = $1",
+                    [id]
+                ));
+                console.log("----------");
+                let dbCharacterVar: dbCharacter = rows[0];
+                console.log(dbCharacterVar);
+                const character = JSON.parse(JSON.stringify(dbCharacterVar.character_data));
+
+                //const character = JSON.parse(fs.readFileSync(path, "utf8"));
+
+                // is there a "plugins" field?
+                if (character.plugins) {
+                    console.log("Plugins are: ", character.plugins);
+
+                    const importedPlugins = await Promise.all(
+                        character.plugins.map(async (plugin) => {
+                            // if the plugin name doesnt start with @eliza,
+
+                            const importedPlugin = await import(plugin);
+                            return importedPlugin;
+                        })
+                    );
+
+                    character.plugins = importedPlugins;
+                }
+
+                loadedCharacters.push(character);
+            } catch (e) {
+                console.error(`Error loading character from ${path}: ${e}`);
+                // don't continue to load if a specified file is not found
+                process.exit(1);
+            }
+        }
+        client.end();
+    }
+    
+
+    if (loadedCharacters.length === 0) {
+        console.log("No characters found, using default character");
+        loadedCharacters.push(defaultCharacter);
     }
 
     return loadedCharacters;
@@ -313,6 +398,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
 }
 
 const startAgents = async () => {
+    console.log("Start Agents ######");
     const directClient: DirectClient = await DirectClientInterface.start() as DirectClient;
     const args = parseArguments();
 
@@ -320,8 +406,20 @@ const startAgents = async () => {
 
     let characters = [character];
 
-    if (charactersArg) {
-        characters = await loadCharacters(charactersArg);
+    let dbCharactersArg = args.dbCharacter;
+
+    console.log(process.argv.slice(2));
+    console.log(charactersArg);
+    console.log(dbCharactersArg);
+
+    //getCharacterFromDB(dbCharactersArg);
+
+    // if (charactersArg) {
+    //     characters = await loadCharacters(charactersArg);
+    // }
+
+    if (dbCharactersArg) {
+        characters = await loadDBCharacters(dbCharactersArg);
     }
 
     try {
@@ -389,4 +487,30 @@ async function handleUserInput(input, agentId) {
     } catch (error) {
         console.error("Error fetching response:", error);
     }
+}
+
+//Nav
+async function getCharacterFromDB(id) {
+    if (process.env.POSTGRES_MASTER_URL) {
+        const { Client } = pg;
+
+        const client = new Client({
+            connectionString: process.env.POSTGRES_MASTER_URL
+        });
+
+
+        await client.connect();
+        const { rows } = await (await client.query(
+            "SELECT * FROM characters WHERE id = $1",
+            [id]
+        ));
+        console.log(rows);
+        client.end();
+        if(rows && rows.length > 0) {
+            console.log("----------");
+            let dbCharacterVar: dbCharacter = rows[0];
+            console.log(dbCharacterVar);
+            return dbCharacterVar.character_data;
+        }
+    } 
 }
