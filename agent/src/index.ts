@@ -5,8 +5,8 @@ import { DiscordClientInterface } from "@ai16z/client-discord";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
-// import { TerminalClientInterface } from "@ai16z/client-terminal";
-import { TerminalClientInterface } from "../../packages/client-terminal/dist/index.js";
+// import { TerminalClientInterface } from "@ai16z/client-terminal"; // would be nice
+import { TerminalClientInterface } from "../../packages/client-terminal/dist/index.js"; // not great, but works after pnpm build
 import {
     defaultCharacter,
     AgentRuntime,
