@@ -26,6 +26,7 @@ import {
     Goal,
     HandlerCallback,
     IAgentRuntime,
+    ICacheManager,
     IDatabaseAdapter,
     IMemoryManager,
     ModelClass,
@@ -131,6 +132,7 @@ export class AgentRuntime implements IAgentRuntime {
 
     services: Map<ServiceType, Service> = new Map();
     memoryManagers: Map<string, IMemoryManager> = new Map();
+    cacheManager: ICacheManager;
 
     registerMemoryManager(manager: IMemoryManager): void {
         if (!manager.tableName) {
@@ -221,6 +223,7 @@ export class AgentRuntime implements IAgentRuntime {
         databaseAdapter: IDatabaseAdapter; // The database adapter used for interacting with the database
         fetch?: typeof fetch | unknown;
         speechModelPath?: string;
+        cacheManager: ICacheManager;
         logging?: boolean;
     }) {
         this.#conversationLength =
@@ -239,6 +242,8 @@ export class AgentRuntime implements IAgentRuntime {
         if (!opts.databaseAdapter) {
             throw new Error("No database adapter provided");
         }
+
+        this.cacheManager = opts.cacheManager;
 
         this.messageManager = new MemoryManager({
             runtime: this,
@@ -363,11 +368,14 @@ export class AgentRuntime implements IAgentRuntime {
                         text: knowledgeItem,
                     },
                 });
+
                 const fragments = await splitChunks(knowledgeItem, 1200, 200);
                 for (const fragment of fragments) {
                     const embedding = await embed(this, fragment);
                     await this.knowledgeManager.createMemory({
-                        id: stringToUuid(fragment),
+                        // We namespace the knowledge base uuid to avoid id
+                        // collision with the document above.
+                        id: stringToUuid(knowledgeId + fragment),
                         roomId: this.agentId,
                         agentId: this.agentId,
                         userId: this.agentId,
@@ -1000,35 +1008,35 @@ Text: ${attachment.text}
                           formattedCharacterMessageExamples
                       )
                     : "",
-                    messageDirections:
-                    this.character?.style?.all?.length > 0 ||
-                    this.character?.style?.chat.length > 0
-                        ? addHeader(
-                            "# Message Directions for " + this.character.name,
-                            (() => {
-                                const all = this.character?.style?.all || [];
-                                const chat = this.character?.style?.chat || [];
-                                return [...all, ...chat].join("\n");
-                            })()
-                        )
-                        : "",
-                
+            messageDirections:
+                this.character?.style?.all?.length > 0 ||
+                this.character?.style?.chat.length > 0
+                    ? addHeader(
+                          "# Message Directions for " + this.character.name,
+                          (() => {
+                              const all = this.character?.style?.all || [];
+                              const chat = this.character?.style?.chat || [];
+                              return [...all, ...chat].join("\n");
+                          })()
+                      )
+                    : "",
+
             postDirections:
                 this.character?.style?.all?.length > 0 ||
                 this.character?.style?.post.length > 0
                     ? addHeader(
-                        "# Post Directions for " + this.character.name,
-                        (() => {
-                            const all = this.character?.style?.all || [];
-                            const post = this.character?.style?.post || [];
-                            return [...all, ...post].join("\n");
-                        })()
-                    )
+                          "# Post Directions for " + this.character.name,
+                          (() => {
+                              const all = this.character?.style?.all || [];
+                              const post = this.character?.style?.post || [];
+                              return [...all, ...post].join("\n");
+                          })()
+                      )
                     : "",
-                    
-            //old logic left in for reference 
+
+            //old logic left in for reference
             //food for thought. how could we dynamically decide what parts of the character to add to the prompt other than random? rag? prompt the llm to decide?
-                    /*
+            /*
             postDirections:
                 this.character?.style?.all?.length > 0 ||
                 this.character?.style?.post.length > 0
