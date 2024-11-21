@@ -109,7 +109,7 @@ export class TwitterInteractionClient {
         try {
             // Check for mentions
             const tweetCandidates = (
-                await this.client.fetchSearchTweets(
+                await this.client.twitterClient.fetchSearchTweets(
                     `@${twitterUsername}`,
                     20,
                     SearchMode.Latest

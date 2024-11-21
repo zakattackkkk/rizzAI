@@ -158,87 +158,69 @@ export class ClientBase extends EventEmitter {
     }
 
     async init() {
-        //test
         const username = this.runtime.getSetting("TWITTER_USERNAME");
 
         if (!username) {
             throw new Error("Twitter username not configured");
         }
-        // Check for Twitter cookies
-        if (this.runtime.getSetting("TWITTER_COOKIES")) {
-            const cookiesArray = JSON.parse(
-                this.runtime.getSetting("TWITTER_COOKIES")
-            );
 
-        // async initialization
-        (async () => {
-            // Check for Twitter cookies
-            if (this.runtime.getSetting("TWITTER_COOKIES")) {
-                const cookiesArray = JSON.parse(
-                    this.runtime.getSetting("TWITTER_COOKIES")
-                );
-                await this.setCookiesFromArray(cookiesArray);
-            } else {
-                elizaLogger.debug("Cookies file path:", cookiesFilePath);
-                if (fs.existsSync(cookiesFilePath)) {
-                    const cookiesArray = JSON.parse(
-                        fs.readFileSync(cookiesFilePath, "utf-8")
-                    );
-                    await this.setCookiesFromArray(cookiesArray);
-                } else {
-                    await this.twitterClient.login(
-                        this.runtime.getSetting("TWITTER_USERNAME"),
-                        this.runtime.getSetting("TWITTER_PASSWORD"),
-                        this.runtime.getSetting("TWITTER_EMAIL"),
-                        this.runtime.getSetting("TWITTER_2FA_SECRET"),
-                        this.runtime.getSetting("TWITTER_API_KEY"),
-                        this.runtime.getSetting("TWITTER_API_SECRET_KEY"),
-                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN"),
-                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET")
-                    );
-                    elizaLogger.log("Logged in to Twitter");
-                    const cookies = await this.twitterClient.getCookies();
-                    fs.writeFileSync(
-                        cookiesFilePath,
-                        JSON.stringify(cookies),
-                        "utf-8"
-                    );
-                }
+        // Check for Twitter cookies
+        const cookies = this.runtime.getSetting("TWITTER_COOKIES");
+        if (cookies) {
+            const cookiesArray = JSON.parse(cookies);
             await this.setCookiesFromArray(cookiesArray);
         } else {
+            await this.twitterClient.login(
+                this.runtime.getSetting("TWITTER_USERNAME"),
+                this.runtime.getSetting("TWITTER_PASSWORD"),
+                this.runtime.getSetting("TWITTER_EMAIL"),
+                this.runtime.getSetting("TWITTER_2FA_SECRET"),
+                this.runtime.getSetting("TWITTER_API_KEY"),
+                this.runtime.getSetting("TWITTER_API_SECRET_KEY"),
+                this.runtime.getSetting("TWITTER_ACCESS_TOKEN"),
+                this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET")
+            );
+            elizaLogger.log("Logged in to Twitter");
             const cachedCookies = await this.getCachedCookies(username);
             if (cachedCookies) {
                 await this.setCookiesFromArray(cachedCookies);
             }
         }
+        let loggedInWaits = 0;
 
-            let loggedInWaits = 0;
-
-            while (!(await this.twitterClient.isLoggedIn())) {
-                console.log("Waiting for Twitter login");
-                await new Promise((resolve) => setTimeout(resolve, 2000));
-                if (loggedInWaits > 10) {
-                    console.error("Failed to login to Twitter");
-                    await this.twitterClient.login(
-                        this.runtime.getSetting("TWITTER_USERNAME"),
-                        this.runtime.getSetting("TWITTER_PASSWORD"),
-                        this.runtime.getSetting("TWITTER_EMAIL"),
-                        this.runtime.getSetting("TWITTER_2FA_SECRET"),
-                        this.runtime.getSetting("TWITTER_API_KEY"),
-                        this.runtime.getSetting("TWITTER_API_SECRET_KEY"),
-                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN"),
-                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET")
-                    );
-
-            if (await this.twitterClient.isLoggedIn()) {
-                const cookies = await this.twitterClient.getCookies();
-                await this.cacheCookies(username, cookies);
-                break;
-            }
-
-            elizaLogger.error("Failed to login to Twitter trying again...");
-
+        while (!(await this.twitterClient.isLoggedIn())) {
+            console.log("Waiting for Twitter login...");
             await new Promise((resolve) => setTimeout(resolve, 2000));
+            loggedInWaits++;
+
+            if (loggedInWaits > 10) {
+                console.error("Failed to login to Twitter, retrying...");
+                await this.twitterClient.login(
+                    this.runtime.getSetting("TWITTER_USERNAME"),
+                    this.runtime.getSetting("TWITTER_PASSWORD"),
+                    this.runtime.getSetting("TWITTER_EMAIL"),
+                    this.runtime.getSetting("TWITTER_2FA_SECRET"),
+                    this.runtime.getSetting("TWITTER_API_KEY"),
+                    this.runtime.getSetting("TWITTER_API_SECRET_KEY"),
+                    this.runtime.getSetting("TWITTER_ACCESS_TOKEN"),
+                    this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET")
+                );
+
+                if (await this.twitterClient.isLoggedIn()) {
+                    const refreshedCookies =
+                        await this.twitterClient.getCookies();
+                    await this.cacheCookies(username, refreshedCookies);
+                    break;
+                }
+
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+        }
+
+        if (!(await this.twitterClient.isLoggedIn())) {
+            throw new Error(
+                "Failed to log in to Twitter after multiple attempts"
+            );
         }
 
         // Initialize Twitter profile
@@ -247,9 +229,10 @@ export class ClientBase extends EventEmitter {
         if (this.profile) {
             elizaLogger.log("Twitter user ID:", this.profile.id);
             elizaLogger.log(
-                "Twitter loaded:",
-                JSON.stringify(this.profile, null, 10)
+                "Twitter profile loaded:",
+                JSON.stringify(this.profile, null, 2)
             );
+
             // Store profile info for use in responses
             this.runtime.character.twitterProfile = {
                 id: this.profile.id,
@@ -259,101 +242,11 @@ export class ClientBase extends EventEmitter {
                 nicknames: this.profile.nicknames,
             };
         } else {
-            throw new Error("Failed to load profile");
+            throw new Error("Failed to load Twitter profile");
         }
 
         await this.loadLatestCheckedTweetId();
         await this.populateTimeline();
-    }
-
-    async fetchHomeTimeline(count: number): Promise<Tweet[]> {
-        elizaLogger.debug("fetching home timeline");
-        const homeTimeline = await this.twitterClient.getUserTweets(
-            this.profile.id,
-            count
-        );
-
-        // console.dir(homeTimeline, { depth: Infinity });
-
-        return homeTimeline.tweets;
-        // .filter((t) => t.__typename !== "TweetWithVisibilityResults")
-        // .map((tweet) => {
-        //     // console.log("tweet is", tweet);
-        //     const obj = {
-        //         id: tweet.id,
-        //         name:
-        //             tweet.name ??
-        //             tweet. ?.user_results?.result?.legacy.name,
-        //         username:
-        //             tweet.username ??
-        //             tweet.core?.user_results?.result?.legacy.screen_name,
-        //         text: tweet.text ?? tweet.legacy?.full_text,
-        //         inReplyToStatusId:
-        //             tweet.inReplyToStatusId ??
-        //             tweet.legacy?.in_reply_to_status_id_str,
-        //         createdAt: tweet.createdAt ?? tweet.legacy?.created_at,
-        //         userId: tweet.userId ?? tweet.legacy?.user_id_str,
-        //         conversationId:
-        //             tweet.conversationId ??
-        //             tweet.legacy?.conversation_id_str,
-        //         hashtags: tweet.hashtags ?? tweet.legacy?.entities.hashtags,
-        //         mentions:
-        //             tweet.mentions ?? tweet.legacy?.entities.user_mentions,
-        //         photos:
-        //             tweet.photos ??
-        //             tweet.legacy?.entities.media?.filter(
-        //                 (media) => media.type === "photo"
-        //             ) ??
-        //             [],
-        //         thread: [],
-        //         urls: tweet.urls ?? tweet.legacy?.entities.urls,
-        //         videos:
-        //             tweet.videos ??
-        //             tweet.legacy?.entities.media?.filter(
-        //                 (media) => media.type === "video"
-        //             ) ??
-        //             [],
-        //     };
-        //     // console.log("obj is", obj);
-        //     return obj;
-        // });
-    }
-
-    async fetchSearchTweets(
-        query: string,
-        maxTweets: number,
-        searchMode: SearchMode,
-        cursor?: string
-    ): Promise<QueryTweetsResponse> {
-        try {
-            // Sometimes this fails because we are rate limited. in this case, we just need to return an empty array
-            // if we dont get a response in 5 seconds, something is wrong
-            const timeoutPromise = new Promise((resolve) =>
-                setTimeout(() => resolve({ tweets: [] }), 10000)
-            );
-
-            try {
-                const result = await this.requestQueue.add(
-                    async () =>
-                        await Promise.race([
-                            this.twitterClient.fetchSearchTweets(
-                                query,
-                                maxTweets,
-                                searchMode,
-                                cursor
-                            ),
-                            timeoutPromise,
-                        ])
-                );
-                return (result ?? { tweets: [] }) as QueryTweetsResponse;
-            } catch (error) {
-                elizaLogger.error("Error fetching search tweets:", error);
-                return { tweets: [] };
-            }
-        } catch (error) {
-            elizaLogger.error("Error fetching search tweets:", error);
-            return { tweets: [] };
-        }
     }
 
     private async populateTimeline() {
@@ -484,14 +377,18 @@ export class ClientBase extends EventEmitter {
             }
         }
 
-        const timeline = await this.fetchHomeTimeline(cachedTimeline ? 10 : 50);
+        const timeline = await this.twitterClient.fetchHomeTimeline(
+            cachedTimeline ? 10 : 50,
+            cachedTimeline.map((t) => t.id)
+        );
 
         // Get the most recent 20 mentions and interactions
-        const mentionsAndInteractions = await this.fetchSearchTweets(
-            `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
-            20,
-            SearchMode.Latest
-        );
+        const mentionsAndInteractions =
+            await this.twitterClient.fetchSearchTweets(
+                `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
+                20,
+                SearchMode.Latest
+            );
 
         // Combine the timeline tweets and mentions/interactions
         const allTweets = [...timeline, ...mentionsAndInteractions.tweets];
