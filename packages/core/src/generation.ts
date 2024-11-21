@@ -24,8 +24,12 @@ import {
 import settings from "./settings.ts";
 import {
     Content,
-    IAgentRuntime, IImageDescriptionService, ITextGenerationService, ModelClass, ModelProviderName,
-    ServiceType
+    IAgentRuntime,
+    IImageDescriptionService,
+    ITextGenerationService,
+    ModelClass,
+    ModelProviderName,
+    ServiceType,
 } from "./types.ts";
 
 /**
@@ -310,14 +314,14 @@ export async function generateText({
 
             case ModelProviderName.OLLAMA:
                 {
-                    console.debug("Initializing Ollama model.");
+                    elizaLogger.debug("Initializing Ollama model.");
 
                     const ollamaProvider = createOllama({
                         baseURL: models[provider].endpoint + "/api",
                     });
                     const ollama = ollamaProvider(model);
 
-                    console.debug("****** MODEL\n", model);
+                    elizaLogger.debug("****** MODEL\n", model);
 
                     const { text: ollamaResponse } = await aiGenerateText({
                         model: ollama,
@@ -330,7 +334,7 @@ export async function generateText({
 
                     response = ollamaResponse;
                 }
-                console.debug("Received response from Ollama model.");
+                elizaLogger.debug("Received response from Ollama model.");
                 break;
 
             case ModelProviderName.HEURIST: {
