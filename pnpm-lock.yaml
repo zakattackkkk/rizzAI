@@ -47,7 +47,7 @@ importers:
         version: 5.4.11(@types/node@22.8.4)(terser@5.36.0)
       vitest:
         specifier: ^2.1.5
-        version: 2.1.5(@types/node@22.8.4)(terser@5.36.0)
+        version: 2.1.5(@types/node@22.8.4)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(terser@5.36.0)
 
   agent:
     dependencies:
@@ -72,6 +72,9 @@ importers:
       '@ai16z/client-twitter':
         specifier: workspace:*
         version: link:../packages/client-twitter
+      '@ai16z/client-twitter-api':
+        specifier: workspace:*
+        version: link:../packages/client-twitter-api
       '@ai16z/eliza':
         specifier: workspace:*
         version: link:../packages/core
@@ -429,6 +432,9 @@ importers:
       whatwg-url:
         specifier: 7.1.0
         version: 7.1.0
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -473,6 +479,9 @@ importers:
       telegraf:
         specifier: 4.16.3
         version: 4.16.3(encoding@0.1.13)
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -489,6 +498,31 @@ importers:
       glob:
         specifier: 11.0.0
         version: 11.0.0
+      whatwg-url:
+        specifier: 7.1.0
+        version: 7.1.0
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.3.5(@swc/core@1.9.2(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
+
+  packages/client-twitter-api:
+    dependencies:
+      '@ai16z/eliza':
+        specifier: workspace:*
+        version: link:../core
+      agent-twitter-client:
+        specifier: 0.0.13
+        version: 0.0.13
+      glob:
+        specifier: 11.0.0
+        version: 11.0.0
+      twitter-api-v2:
+        specifier: ^1.18.2
+        version: 1.18.2
       whatwg-url:
         specifier: 7.1.0
         version: 7.1.0
@@ -516,16 +550,16 @@ importers:
         version: 1.0.0-canary.3(zod@3.23.8)
       '@ai16z/adapter-sqlite':
         specifier: ^0.1.3
-        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)
+        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)
       '@ai16z/adapter-sqljs':
         specifier: ^0.1.3
-        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)
+        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)
       '@ai16z/adapter-supabase':
         specifier: ^0.1.3
-        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)
+        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)
       '@ai16z/plugin-solana':
         specifier: ^0.1.3
-        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(jiti@2.4.0)(postcss@8.4.49)(react@18.3.1)(rollup@2.79.2)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)(yaml@2.6.1)
+        version: 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(jiti@2.4.0)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(postcss@8.4.49)(react@18.3.1)(rollup@2.79.2)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)(yaml@2.6.1)
       '@anthropic-ai/sdk':
         specifier: ^0.30.1
         version: 0.30.1(encoding@0.1.13)
@@ -629,6 +663,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: 8.12.2
         version: 8.12.2(eslint@9.13.0(jiti@2.4.0))(typescript@5.6.3)
+      dompurify:
+        specifier: ^3.2.0
+        version: 3.2.0
       dotenv:
         specifier: 16.4.5
         version: 16.4.5
@@ -644,6 +681,9 @@ importers:
       jest:
         specifier: 29.7.0
         version: 29.7.0(@types/node@22.8.4)(ts-node@10.9.2(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(typescript@5.6.3))
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10)
       lint-staged:
         specifier: 15.2.10
         version: 15.2.10
@@ -951,7 +991,7 @@ importers:
         version: 8.3.5(@swc/core@1.9.2(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
       vitest:
         specifier: ^2.1.4
-        version: 2.1.5(@types/node@22.8.4)(terser@5.36.0)
+        version: 2.1.5(@types/node@22.8.4)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(terser@5.36.0)
       whatwg-url:
         specifier: 7.1.0
         version: 7.1.0
@@ -972,7 +1012,7 @@ importers:
         version: 11.0.2
       vitest:
         specifier: ^2.1.4
-        version: 2.1.5(@types/node@22.8.4)(terser@5.36.0)
+        version: 2.1.5(@types/node@22.8.4)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(terser@5.36.0)
       whatwg-url:
         specifier: 7.1.0
         version: 7.1.0
@@ -4617,8 +4657,8 @@ packages:
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
 
-  '@swc/types@0.1.16':
-    resolution: {integrity: sha512-okcPxwxfdKUPrH15TbMcuqMJBu6QcxjHwyhYj1IPyaSAKHY7SHqhaS2UCANaOQ/+E6Dor50IgNpSbeJNqcuehw==}
+  '@swc/types@0.1.17':
+    resolution: {integrity: sha512-V5gRru+aD8YVyCOMAjMpWR1Ui577DD5KSJsHP8RAxopAH22jFz6GZd/qxqjO6MJHQhcsjvjOFXyDhyLQUnMveQ==}
 
   '@szmarczak/http-timer@5.0.1':
     resolution: {integrity: sha512-+PmQX0PiAYPMeVYe237LJAYvOMYW1j2rH5YROyS3b4CTVJum34HfRvKvAzozHAQG0TnHNdUfY9nCeUyRAs//cw==}
@@ -6619,6 +6659,10 @@ packages:
     resolution: {integrity: sha512-0LrrStPOdJj+SPCCrGhzryycLjwcgUSHBtxNA8aIDxf0GLsRh1cKYhB00Gd1lDOS4yGH69+SNn13+TWbVHETFQ==}
     engines: {node: ^10 || ^12.20.0 || ^14.13.0 || >=15.0.0, npm: '>=7.0.0'}
 
+  cssstyle@4.1.0:
+    resolution: {integrity: sha512-h66W1URKpBS5YMI/V8PyXvTMFT8SupJ1IzoIV8IeBC/ji8WVmrO8dGlTi+2dh6whmdk6BiKJLD/ZBkhWbcg6nA==}
+    engines: {node: '>=18'}
+
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
 
@@ -6806,6 +6850,10 @@ packages:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
     engines: {node: '>= 14'}
 
+  data-urls@5.0.0:
+    resolution: {integrity: sha512-ZYP5VBHshaDAiVZxjbRVcFJpc+4xGgT0bK3vzy1HLN8jTO975HEbuYzZJcHoQEY5K1a0z8YayJkyVETa08eNTg==}
+    engines: {node: '>=18'}
+
   dateformat@3.0.3:
     resolution: {integrity: sha512-jyCETtSl3VMZMWeRo7iY1FL19ges1t55hMo5yaam4Jrsm5EPL89UQkoQRyiI+Yf4k8r2ZpdngkV8hr1lIdjb3Q==}
 
@@ -6870,6 +6918,9 @@ packages:
 
   decimal.js-light@2.5.1:
     resolution: {integrity: sha512-qIMFpTMZmny+MMIitAB6D7iVPEorVw6YQRWkvarTkT4tBeSLLiHzcwj6q0MmYSFCiVpiqPJTJEYIrpcPzVEIvg==}
+
+  decimal.js@10.4.3:
+    resolution: {integrity: sha512-VBBaLc1MgL5XpzgIP7ny5Z6Nx3UrRkIViUkPUdtl9aya5amy3De1gsUUSB1g3+3sExYNjCAsAznmukyxCb1GRA==}
 
   decode-named-character-reference@1.0.2:
     resolution: {integrity: sha512-O8x12RzrUF8xyVcY0KJowWsmaJxQbmy0/EtnNtHRpsOcT7dFk5W598coHqBVpmWo1oQQfsCqfCmkZN5DJrZVdg==}
@@ -8217,6 +8268,10 @@ packages:
   hpack.js@2.1.6:
     resolution: {integrity: sha512-zJxVehUdMGIKsRaNt7apO2Gqp0BdqW5yaiGHXXmbpvxgBYVZnAql+BJb4RO5ad2MgpbZKn5G6nMnegrH1FcNYQ==}
 
+  html-encoding-sniffer@4.0.0:
+    resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
+    engines: {node: '>=18'}
+
   html-entities@2.5.2:
     resolution: {integrity: sha512-K//PSRMQk4FZ78Kyau+mZurHn3FH0Vwr+H36eE0rPbeYkRRi9YxceYPhuN60UwWorxyKHhqoAJl2OFKa4BVtaA==}
 
@@ -8611,6 +8666,9 @@ packages:
     resolution: {integrity: sha512-VRSzKkbMm5jMDoKLbltAkFQ5Qr7VDiTFGXxYFXXowVj387GeGNOCsOH6Msy00SGZ3Fp84b1Naa1psqgcCIEP5Q==}
     engines: {node: '>=0.10.0'}
 
+  is-potential-custom-element-name@1.0.1:
+    resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
+
   is-promise@2.2.2:
     resolution: {integrity: sha512-+lP4/6lKUBfQjZ2pdxThZvLUAafmZb8OAxFb8XXtiQmS35INgr85hdOGoEs124ez1FCnZJt6jau/T+alh58QFQ==}
 
@@ -8928,6 +8986,15 @@ packages:
 
   jsbn@1.1.0:
     resolution: {integrity: sha512-4bYVV3aAMtDTTu4+xsDYa6sy9GyJ69/amsu9sYF2zqjiEoZA5xJi3BrfX3uY+/IekIu7MwdObdbDWpoZdBv3/A==}
+
+  jsdom@25.0.1:
+    resolution: {integrity: sha512-8i7LzZj7BF8uplX+ZyOlIz86V6TAsSs+np6m1kpW9u0JWi4z/1t+FzcK1aek+ybTnAC4KhBL4uXCNT0wcUIeCw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      canvas: ^2.11.2
+    peerDependenciesMeta:
+      canvas:
+        optional: true
 
   jsesc@3.0.2:
     resolution: {integrity: sha512-xKqzzWXDttJuOcawBt4KnKHHIf5oQ/Cxax+0PWFG+DFDgHNAdi+TXECADI+RYiFUMmx8792xsMbbgXj4CwnP4g==}
@@ -10076,6 +10143,9 @@ packages:
     engines: {node: '>= 10.13.0'}
     peerDependencies:
       webpack: ^4.0.0 || ^5.0.0
+
+  nwsapi@2.2.13:
+    resolution: {integrity: sha512-cTGB9ptp9dY9A5VbMSe7fQBcl/tt22Vcqdq8+eN93rblOuE0aCFu4aZ2vMwct/2t+lFnosm8RkQW1I0Omb1UtQ==}
 
   nx@20.1.2:
     resolution: {integrity: sha512-CvjmuQmI0RWLYZxRSIgQZmzsQv6dPp9oI0YZE3L1dagBPfTf5Cun65I0GLt7bdkDnVx2PGYkDbIoJSv2/V+83Q==}
@@ -11441,8 +11511,8 @@ packages:
   proxy-from-env@1.1.0:
     resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
 
-  psl@1.10.0:
-    resolution: {integrity: sha512-KSKHEbjAnpUuAUserOq0FxGXCUrzC3WniuSJhvdbs102rL55266ZcHBqLWOsG30spQMlPdpy7icATiAQehg/iA==}
+  psl@1.11.0:
+    resolution: {integrity: sha512-pjFdcBXT4g061k/SQkzNCRnav+1RdIOgrcX8hs5eL3CEQcFZP9qT8T1RWYxGKT11rH1DdIW+kJRfCYykBJuerQ==}
 
   pstree.remy@1.1.8:
     resolution: {integrity: sha512-77DZwxQmxKnu3aR542U+X8FypNzbfJ+C5XQDk3uWjWxn6151aIMGthWYRXTqT1E5oJvg+ljaa2OJi+VfvCOQ8w==}
@@ -11968,6 +12038,9 @@ packages:
   rpc-websockets@9.0.4:
     resolution: {integrity: sha512-yWZWN0M+bivtoNLnaDbtny4XchdAIF5Q4g/ZsC5UC61Ckbp0QczwO8fg44rV3uYmY4WHd+EZQbn90W1d8ojzqQ==}
 
+  rrweb-cssom@0.7.1:
+    resolution: {integrity: sha512-TrEMa7JGdVm0UThDJSx7ddw5nVm3UJS9o9CCIZ72B1vSyEZoziDqBYP3XIoi/12lKrJR8rE3jeFHMok2F/Mnsg==}
+
   rtl-detect@1.1.2:
     resolution: {integrity: sha512-PGMBq03+TTG/p/cRB7HCLKJ1MgDIi07+QU1faSjiYRfmY5UsAttV9Hs08jDAHVwcOwmVLcSJkpwyfXszVjWfIQ==}
 
@@ -12013,6 +12086,10 @@ packages:
 
   sax@1.4.1:
     resolution: {integrity: sha512-+aWOz7yVScEGoKNd4PA10LZ8sk0A/z5+nXQG5giUO5rprX9jgYsTdov9qCchZiPIZezbZH+jRut8nPodFAX4Jg==}
+
+  saxes@6.0.0:
+    resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
+    engines: {node: '>=v12.22.7'}
 
   scheduler@0.23.2:
     resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
@@ -12574,6 +12651,9 @@ packages:
     peerDependencies:
       vue: '>=3.2.26 < 4'
 
+  symbol-tree@3.2.4:
+    resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
+
   synckit@0.9.2:
     resolution: {integrity: sha512-vrozgXDQwYO72vHjUb/HnFbQx1exDjoKzqx23aXEg2a9VIg2TSFZ8FmeZpTjUCFMYw7mpX4BE2SFu8wI7asYsw==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -12747,6 +12827,10 @@ packages:
   tldts-experimental@6.1.62:
     resolution: {integrity: sha512-HQAtXbhAaCvqo7eV7q0vdrUO6rPkN1Mzjc2MPnxHzjkMz/YQPfiqWFece8Txni0NRnFaZdMdRYl7cSSO95TlFA==}
 
+  tldts@6.1.62:
+    resolution: {integrity: sha512-TF+wo3MgTLbf37keEwQD0IxvOZO8UZxnpPJDg5iFGAASGxYzbX/Q0y944ATEjrfxG/pF1TWRHCPbFp49Mz1Y1w==}
+    hasBin: true
+
   tmp@0.0.33:
     resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
     engines: {node: '>=0.6.0'}
@@ -12798,11 +12882,19 @@ packages:
     resolution: {integrity: sha512-Loo5UUvLD9ScZ6jh8beX1T6sO1w2/MpCRpEP7V280GKMVUQ0Jzar2U3UJPsrdbziLEMMhu3Ujnq//rhiFuIeag==}
     engines: {node: '>=6'}
 
+  tough-cookie@5.0.0:
+    resolution: {integrity: sha512-FRKsF7cz96xIIeMZ82ehjC3xW2E+O2+v11udrDYewUbszngYhsGa8z6YUMMzO9QJZzzyd0nGGXnML/TReX6W8Q==}
+    engines: {node: '>=16'}
+
   tr46@0.0.3:
     resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
 
   tr46@1.0.1:
     resolution: {integrity: sha512-dTpowEjclQ7Kgx5SdBkqRzVhERQXov8/l9Ft9dVM9fmg0W0KQSVaXX9T4i6twCPNtYiZM53lpSSUAwJbFPOHxA==}
+
+  tr46@5.0.0:
+    resolution: {integrity: sha512-tk2G5R2KRwBd+ZN0zaEXpmzdKyOYksXwywulIX95MBODjSzMIuQnQ3m8JxgbhnL1LeVo7lqQKsYa1O3Htl7K5g==}
+    engines: {node: '>=18'}
 
   tree-kill@1.2.2:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
@@ -12924,6 +13016,9 @@ packages:
 
   tweetnacl@0.14.5:
     resolution: {integrity: sha512-KXXFFdAbFXY4geFIwoyNK+f5Z1b7swfXABfL7HXCmoIWMKU3dmS26672A4EeQtDzLKy7SXmfBu51JolvEKwtGA==}
+
+  twitter-api-v2@1.18.2:
+    resolution: {integrity: sha512-ggImmoAeVgETYqrWeZy+nWnDpwgTP+IvFEc03Pitt1HcgMX+Yw17rP38Fb5FFTinuyNvS07EPtAfZ184uIyB0A==}
 
   tx2@1.0.5:
     resolution: {integrity: sha512-sJ24w0y03Md/bxzK4FU8J8JveYYUbSs2FViLJ2D/8bytSiyPRbuE3DyL/9UKYXTZlV3yXq0L8GLlhobTnekCVg==}
@@ -13374,6 +13469,10 @@ packages:
       typescript:
         optional: true
 
+  w3c-xmlserializer@5.0.0:
+    resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
+    engines: {node: '>=18'}
+
   walk-up-path@3.0.1:
     resolution: {integrity: sha512-9YlCL/ynK3CTlrSRrDxZvUauLzAswPCrsaCgilqFevUYpeEW0/3ScEjaa3kbW/T0ghhkEr7mv+fpjqn1Y1YuTA==}
 
@@ -13416,6 +13515,10 @@ packages:
 
   webidl-conversions@4.0.2:
     resolution: {integrity: sha512-YQ+BmxuTgd6UXZW3+ICGfyqRyHXVlD5GtQr5+qjiNW7bF0cqrzX500HVXPBOvgXb5YnzDd+h0zqyv61KUD7+Sg==}
+
+  webidl-conversions@7.0.0:
+    resolution: {integrity: sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==}
+    engines: {node: '>=12'}
 
   webpack-bundle-analyzer@4.10.2:
     resolution: {integrity: sha512-vJptkMm9pk5si4Bv922ZbKLV8UTT4zib4FPgXMhgzUny0bfDDkLXAVQs3ly3fS4/TN9ROFtb0NFrm04UXFE/Vw==}
@@ -13477,8 +13580,20 @@ packages:
     resolution: {integrity: sha512-OqedPIGOfsDlo31UNwYbCFMSaO9m9G/0faIHj5/dZFDMFqPTcx6UwqyOy3COEaEOg/9VsGIpdqn62W5KhoKSpg==}
     engines: {node: '>=0.8.0'}
 
+  whatwg-encoding@3.1.1:
+    resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
+    engines: {node: '>=18'}
+
   whatwg-fetch@3.6.20:
     resolution: {integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==}
+
+  whatwg-mimetype@4.0.0:
+    resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
+    engines: {node: '>=18'}
+
+  whatwg-url@14.0.0:
+    resolution: {integrity: sha512-1lfMEm2IEr7RIV+f4lUNPOqfFL+pO+Xw3fJSqmjX9AbXcXcYOkCe1P6+9VBZB6n94af16NfZf+sSk0JCBZC9aw==}
+    engines: {node: '>=18'}
 
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
@@ -13622,6 +13737,13 @@ packages:
   xml-js@1.6.11:
     resolution: {integrity: sha512-7rVi2KMfwfWFl+GpPg6m80IVMWXLRjO+PxTq7V2CDhoGak0wzYzFgUY2m4XJ47OGdXd8eLE8EmwfAmdjw7lC1g==}
     hasBin: true
+
+  xml-name-validator@5.0.0:
+    resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
+    engines: {node: '>=18'}
+
+  xmlchars@2.2.0:
+    resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
@@ -13840,13 +13962,13 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@ai16z/adapter-sqlite@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)':
+  '@ai16z/adapter-sqlite@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)':
     dependencies:
       '@ai16z/eliza': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))
       '@types/better-sqlite3': 7.6.11
       better-sqlite3: 11.5.0
       sqlite-vec: 0.1.4-alpha.2
-      whatwg-url: 7.1.0
+      whatwg-url: 14.0.0
     transitivePeerDependencies:
       - '@google-cloud/vertexai'
       - encoding
@@ -13857,13 +13979,13 @@ snapshots:
       - svelte
       - vue
 
-  '@ai16z/adapter-sqljs@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)':
+  '@ai16z/adapter-sqljs@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)':
     dependencies:
       '@ai16z/eliza': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))
       '@types/sql.js': 1.4.9
       sql.js: 1.12.0
       uuid: 11.0.2
-      whatwg-url: 7.1.0
+      whatwg-url: 14.0.0
     transitivePeerDependencies:
       - '@google-cloud/vertexai'
       - encoding
@@ -13874,11 +13996,11 @@ snapshots:
       - svelte
       - vue
 
-  '@ai16z/adapter-supabase@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)':
+  '@ai16z/adapter-supabase@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)':
     dependencies:
       '@ai16z/eliza': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))
       '@supabase/supabase-js': 2.46.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
-      whatwg-url: 7.1.0
+      whatwg-url: 14.0.0
     transitivePeerDependencies:
       - '@google-cloud/vertexai'
       - bufferutil
@@ -13924,10 +14046,10 @@ snapshots:
       - svelte
       - vue
 
-  '@ai16z/plugin-solana@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(jiti@2.4.0)(postcss@8.4.49)(react@18.3.1)(rollup@2.79.2)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)(yaml@2.6.1)':
+  '@ai16z/plugin-solana@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(jiti@2.4.0)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(postcss@8.4.49)(react@18.3.1)(rollup@2.79.2)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(utf-8-validate@5.0.10)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)(yaml@2.6.1)':
     dependencies:
       '@ai16z/eliza': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))
-      '@ai16z/plugin-trustdb': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(encoding@0.1.13)(jiti@2.4.0)(postcss@8.4.49)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)(yaml@2.6.1)
+      '@ai16z/plugin-trustdb': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(encoding@0.1.13)(jiti@2.4.0)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(postcss@8.4.49)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)(yaml@2.6.1)
       '@coral-xyz/anchor': 0.30.1(bufferutil@4.0.8)(encoding@0.1.13)(utf-8-validate@5.0.10)
       '@solana/spl-token': 0.4.9(@solana/web3.js@1.95.4(bufferutil@4.0.8)(encoding@0.1.13)(utf-8-validate@5.0.10))(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.6.3)(utf-8-validate@5.0.10)
       '@solana/web3.js': 1.95.4(bufferutil@4.0.8)(encoding@0.1.13)(utf-8-validate@5.0.10)
@@ -13937,7 +14059,7 @@ snapshots:
       node-cache: 5.1.2
       pumpdotfun-sdk: 1.3.2(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(rollup@2.79.2)(typescript@5.6.3)(utf-8-validate@5.0.10)
       tsup: 8.3.5(@swc/core@1.9.2(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
-      whatwg-url: 7.1.0
+      whatwg-url: 14.0.0
     transitivePeerDependencies:
       - '@edge-runtime/vm'
       - '@google-cloud/vertexai'
@@ -13973,14 +14095,14 @@ snapshots:
       - vue
       - yaml
 
-  '@ai16z/plugin-trustdb@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(encoding@0.1.13)(jiti@2.4.0)(postcss@8.4.49)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))(whatwg-url@7.1.0)(yaml@2.6.1)':
+  '@ai16z/plugin-trustdb@0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@swc/core@1.9.2(@swc/helpers@0.5.15))(@types/node@22.8.4)(encoding@0.1.13)(jiti@2.4.0)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(postcss@8.4.49)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(terser@5.36.0)(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))(whatwg-url@14.0.0)(yaml@2.6.1)':
     dependencies:
       '@ai16z/eliza': 0.1.3(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(encoding@0.1.13)(react@18.3.1)(sswr@2.1.0(svelte@5.2.7))(svelte@5.2.7)(vue@3.5.13(typescript@5.6.3))
       dompurify: 3.2.0
       tsup: 8.3.5(@swc/core@1.9.2(@swc/helpers@0.5.15))(jiti@2.4.0)(postcss@8.4.49)(typescript@5.6.3)(yaml@2.6.1)
       uuid: 11.0.2
-      vitest: 2.1.5(@types/node@22.8.4)(terser@5.36.0)
-      whatwg-url: 7.1.0
+      vitest: 2.1.5(@types/node@22.8.4)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(terser@5.36.0)
+      whatwg-url: 14.0.0
     transitivePeerDependencies:
       - '@edge-runtime/vm'
       - '@google-cloud/vertexai'
@@ -18631,7 +18753,7 @@ snapshots:
   '@swc/core@1.9.2(@swc/helpers@0.5.15)':
     dependencies:
       '@swc/counter': 0.1.3
-      '@swc/types': 0.1.16
+      '@swc/types': 0.1.17
     optionalDependencies:
       '@swc/core-darwin-arm64': 1.9.2
       '@swc/core-darwin-x64': 1.9.2
@@ -18651,7 +18773,7 @@ snapshots:
     dependencies:
       tslib: 2.8.0
 
-  '@swc/types@0.1.16':
+  '@swc/types@0.1.17':
     dependencies:
       '@swc/counter': 0.1.3
 
@@ -21058,6 +21180,10 @@ snapshots:
     dependencies:
       css-tree: 2.2.1
 
+  cssstyle@4.1.0:
+    dependencies:
+      rrweb-cssom: 0.7.1
+
   csstype@3.1.3: {}
 
   csv-writer@1.6.0: {}
@@ -21267,6 +21393,11 @@ snapshots:
 
   data-uri-to-buffer@6.0.2: {}
 
+  data-urls@5.0.0:
+    dependencies:
+      whatwg-mimetype: 4.0.0
+      whatwg-url: 14.0.0
+
   dateformat@3.0.3: {}
 
   dayjs@1.11.13: {}
@@ -21317,6 +21448,8 @@ snapshots:
   decamelize@1.2.0: {}
 
   decimal.js-light@2.5.1: {}
+
+  decimal.js@10.4.3: {}
 
   decode-named-character-reference@1.0.2:
     dependencies:
@@ -22981,6 +23114,10 @@ snapshots:
       readable-stream: 2.3.8
       wbuf: 1.7.3
 
+  html-encoding-sniffer@4.0.0:
+    dependencies:
+      whatwg-encoding: 3.1.1
+
   html-entities@2.5.2: {}
 
   html-escaper@2.0.2: {}
@@ -23368,6 +23505,8 @@ snapshots:
       isobject: 3.0.1
 
   is-plain-object@5.0.0: {}
+
+  is-potential-custom-element-name@1.0.1: {}
 
   is-promise@2.2.2: {}
 
@@ -23875,6 +24014,36 @@ snapshots:
 
   jsbn@1.1.0: {}
 
+  jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10):
+    dependencies:
+      cssstyle: 4.1.0
+      data-urls: 5.0.0
+      decimal.js: 10.4.3
+      form-data: 4.0.1
+      html-encoding-sniffer: 4.0.0
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.5
+      is-potential-custom-element-name: 1.0.1
+      nwsapi: 2.2.13
+      parse5: 7.2.1
+      rrweb-cssom: 0.7.1
+      saxes: 6.0.0
+      symbol-tree: 3.2.4
+      tough-cookie: 5.0.0
+      w3c-xmlserializer: 5.0.0
+      webidl-conversions: 7.0.0
+      whatwg-encoding: 3.1.1
+      whatwg-mimetype: 4.0.0
+      whatwg-url: 14.0.0
+      ws: 8.18.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      xml-name-validator: 5.0.0
+    optionalDependencies:
+      canvas: 2.11.2(encoding@0.1.13)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   jsesc@3.0.2: {}
 
   json-bigint@1.0.0:
@@ -24251,7 +24420,7 @@ snapshots:
 
   log-symbols@4.1.0:
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       is-unicode-supported: 0.1.0
 
   log-symbols@6.0.0:
@@ -25479,6 +25648,8 @@ snapshots:
       loader-utils: 2.0.4
       schema-utils: 3.3.0
       webpack: 5.96.1(@swc/core@1.9.2(@swc/helpers@0.5.15))
+
+  nwsapi@2.2.13: {}
 
   nx@20.1.2(@swc/core@1.9.2(@swc/helpers@0.5.15)):
     dependencies:
@@ -26969,7 +27140,7 @@ snapshots:
 
   proxy-from-env@1.1.0: {}
 
-  psl@1.10.0:
+  psl@1.11.0:
     dependencies:
       punycode: 2.3.1
 
@@ -27716,6 +27887,8 @@ snapshots:
       bufferutil: 4.0.8
       utf-8-validate: 5.0.10
 
+  rrweb-cssom@0.7.1: {}
+
   rtl-detect@1.1.2: {}
 
   rtlcss@4.3.0:
@@ -27762,6 +27935,10 @@ snapshots:
       through: 2.3.8
 
   sax@1.4.1: {}
+
+  saxes@6.0.0:
+    dependencies:
+      xmlchars: 2.2.0
 
   scheduler@0.23.2:
     dependencies:
@@ -28448,6 +28625,8 @@ snapshots:
     dependencies:
       vue: 3.5.13(typescript@5.6.3)
 
+  symbol-tree@3.2.4: {}
+
   synckit@0.9.2:
     dependencies:
       '@pkgr/core': 0.1.1
@@ -28646,6 +28825,10 @@ snapshots:
     dependencies:
       tldts-core: 6.1.62
 
+  tldts@6.1.62:
+    dependencies:
+      tldts-core: 6.1.62
+
   tmp@0.0.33:
     dependencies:
       os-tmpdir: 1.0.2
@@ -28689,19 +28872,27 @@ snapshots:
 
   tough-cookie@2.5.0:
     dependencies:
-      psl: 1.10.0
+      psl: 1.11.0
       punycode: 2.3.1
 
   tough-cookie@4.1.4:
     dependencies:
-      psl: 1.10.0
+      psl: 1.11.0
       punycode: 2.3.1
       universalify: 0.2.0
       url-parse: 1.5.10
 
+  tough-cookie@5.0.0:
+    dependencies:
+      tldts: 6.1.62
+
   tr46@0.0.3: {}
 
   tr46@1.0.1:
+    dependencies:
+      punycode: 2.3.1
+
+  tr46@5.0.0:
     dependencies:
       punycode: 2.3.1
 
@@ -28821,6 +29012,8 @@ snapshots:
   tv4@1.3.0: {}
 
   tweetnacl@0.14.5: {}
+
+  twitter-api-v2@1.18.2: {}
 
   tx2@1.0.5:
     dependencies:
@@ -29232,7 +29425,7 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.36.0
 
-  vitest@2.1.5(@types/node@22.8.4)(terser@5.36.0):
+  vitest@2.1.5(@types/node@22.8.4)(jsdom@25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10))(terser@5.36.0):
     dependencies:
       '@vitest/expect': 2.1.5
       '@vitest/mocker': 2.1.5(vite@5.4.11(@types/node@22.8.4)(terser@5.36.0))
@@ -29256,6 +29449,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.8.4
+      jsdom: 25.0.1(bufferutil@4.0.8)(canvas@2.11.2(encoding@0.1.13))(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - less
       - lightningcss
@@ -29301,6 +29495,10 @@ snapshots:
     optionalDependencies:
       typescript: 5.6.3
 
+  w3c-xmlserializer@5.0.0:
+    dependencies:
+      xml-name-validator: 5.0.0
+
   walk-up-path@3.0.1: {}
 
   walker@1.0.8:
@@ -29343,6 +29541,8 @@ snapshots:
   webidl-conversions@3.0.1: {}
 
   webidl-conversions@4.0.2: {}
+
+  webidl-conversions@7.0.0: {}
 
   webpack-bundle-analyzer@4.10.2(bufferutil@4.0.8)(utf-8-validate@5.0.10):
     dependencies:
@@ -29475,7 +29675,18 @@ snapshots:
 
   websocket-extensions@0.1.4: {}
 
+  whatwg-encoding@3.1.1:
+    dependencies:
+      iconv-lite: 0.6.3
+
   whatwg-fetch@3.6.20: {}
+
+  whatwg-mimetype@4.0.0: {}
+
+  whatwg-url@14.0.0:
+    dependencies:
+      tr46: 5.0.0
+      webidl-conversions: 7.0.0
 
   whatwg-url@5.0.0:
     dependencies:
@@ -29610,6 +29821,10 @@ snapshots:
   xml-js@1.6.11:
     dependencies:
       sax: 1.4.1
+
+  xml-name-validator@5.0.0: {}
+
+  xmlchars@2.2.0: {}
 
   xtend@4.0.2: {}
 

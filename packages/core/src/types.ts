@@ -326,11 +326,13 @@ export enum Clients {
     DIRECT = "direct",
     TWITTER = "twitter",
     TELEGRAM = "telegram",
+    TWITTER_API = "twitter-api",
 }
 
 export type Character = {
     id?: UUID; // optional UUID which can be passed down to identify the character
     name: string;
+    username?: string;
     system?: string;
     modelProvider: ModelProviderName;
     modelEndpointOverride?: string;
@@ -386,6 +388,7 @@ export type Character = {
         post: string[];
     };
     twitterProfile?: {
+        id: string;
         username: string;
         screenName: string;
         bio: string;
@@ -594,6 +597,7 @@ export interface IAgentRuntime {
     providers: Provider[];
     actions: Action[];
     evaluators: Evaluator[];
+    plugins: Plugin[];
 
     messageManager: IMemoryManager;
     descriptionManager: IMemoryManager;
@@ -601,6 +605,9 @@ export interface IAgentRuntime {
     cacheManager: ICacheManager;
 
     services: Map<ServiceType, Service>;
+
+    initialize(): Promise<void>;
+
     registerMemoryManager(manager: IMemoryManager): void;
 
     getMemoryManager(name: string): IMemoryManager | null;
