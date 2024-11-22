@@ -32,8 +32,6 @@ import yargs from "yargs";
 
 import path from "path";
 import { fileURLToPath } from "url";
-import { character } from "./character.ts";
-import type { DirectClient } from "@ai16z/client-direct";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -115,7 +113,7 @@ export async function loadCharacters(
     return loadedCharacters;
 }
 
-function initializeDatabase() {
+function initializeDatabase(dataDir) {
     if (process.env.POSTGRES_URL) {
         const db = new PostgresDatabaseAdapter({
             connectionString: process.env.POSTGRES_URL,
@@ -132,22 +130,19 @@ function initializeDatabase() {
 
 export async function initializeClients(
     character: Character,
-    runtime: IAgentRuntime
+    runtime: AgentRuntime,
+    dc: any
 ) {
     const clients = [];
     const clientTypes =
         character.clients?.map((str) => str.toLowerCase()) || [];
 
     if (clientTypes.includes("direct")) {
-        const directClient = await DirectClientInterface.start(runtime);
-
-        if (directClient) {
-            directClient.registerAgent(runtime);
-            clients.push(directClient);
-        }
+        dc.registerAgent(runtime);
     }
 
     if (clientTypes.includes("terminal")) {
+        // MARK: Launches multiple terminal clients when in multi-agent mode, confusing perhaps but not broken.
         const terminalClient = await TerminalClientInterface.start(runtime);
         if (terminalClient) clients.push(terminalClient);
     }
@@ -228,28 +223,19 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
-async function startAgent(character: Character, directClient: DirectClient) {
+async function startAgent(character: Character, db: any, dc: any) {
     try {
         character.id ??= stringToUuid(character.name);
         character.username ??= character.name;
 
         const token = getTokenForProvider(character.modelProvider, character);
-        const dataDir = path.join(__dirname, "../data");
-
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
-        }
-
-        const db = initializeDatabase(dataDir);
-
-        await db.init();
 
         const cache = intializeDbCache(character, db);
         const runtime = createAgent(character, db, cache, token);
 
         await runtime.initialize();
 
-        const clients = await initializeClients(character, runtime);
+        const clients = await initializeClients(character, runtime, dc);
 
         return clients;
     } catch (error) {
@@ -264,7 +250,6 @@ async function startAgent(character: Character, directClient: DirectClient) {
 
 const startAgents = async () => {
     const args = parseArguments();
-
     let charactersArg = args.characters || args.character;
 
     let characters = [character];
@@ -273,9 +258,20 @@ const startAgents = async () => {
         characters = await loadCharacters(charactersArg);
     }
 
+    const dataDir = path.join(__dirname, "../data");
+
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    const db = initializeDatabase(dataDir);
+    await db.init();
+
+    const dc = await DirectClientInterface.start();
+
     try {
         for (const character of characters) {
-            await startAgent(character);
+            await startAgent(character, db, dc);
         }
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
