@@ -1,3 +1,21 @@
+
+# Eliza - AAStar version
+1. Eliza is following a [MIT license](https://github.com/ai16z/eliza?tab=MIT-1-ov-file#readme), it permit us to use it into open source or business with this repo.
+2. AAStar create Cos72, a community operation system, to empower any community with many modules.
+3. <img src="https://raw.githubusercontent.com/jhfnetboy/MarkDownImg/main/img/202411221116311.jpg"/>
+4. AI Agent is an important module.
+5. So we forked and try to create this version.
+6. We name the production: **Alice** with this avatar:
+7. <img src="https://raw.githubusercontent.com/jhfnetboy/MarkDownImg/main/img/202411221137310.png" alt="Alice Banner" width="100%" />
+
+## Features
+1. One key to launch: easy!
+2. Auto information collection and daily report.
+3. Web3 RAG database generation and growing like a community expert.
+4. Embedded into telegram, discord and twitter: ask me anything.
+5. A self-defined SOP for community: onboard, task, check and incentive with human language.
+
+original readme:
 # Eliza
 
 <img src="./docs/static/img/eliza_banner.jpg" alt="Eliza Banner" width="100%" />
