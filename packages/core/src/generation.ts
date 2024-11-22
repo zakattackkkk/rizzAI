@@ -62,7 +62,7 @@ export async function generateText({
         return "";
     }
 
-    elizaLogger.log("Genarating text...");
+    elizaLogger.log("Generating text...");
 
     const provider = runtime.modelProvider;
     const endpoint =
@@ -708,7 +708,7 @@ export async function generateMessageResponse({
     let retryLength = 1000; // exponential backoff
     while (true) {
         try {
-            elizaLogger.log("Genarating message response..");
+            elizaLogger.log("Generating message response..");
 
             const response = await generateText({
                 runtime,
