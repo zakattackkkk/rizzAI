@@ -25,8 +25,8 @@ RUN pnpm i
 # Add the environment variables
 ADD scripts /app/scripts
 ADD characters /app/characters
-ADD .env /app/.env
-ADD .env /app/agent/.env
+# ADD .env /app/.env
+# ADD .env /app/agent/.env
 
 RUN pnpm build
 
