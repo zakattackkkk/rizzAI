@@ -1,0 +1,31 @@
+version: v1.0
+name: Build and Push Docker Image
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+global_job_config:
+  secrets:
+    - name: DO_UNGATE_CR   # Ensure this matches your Semaphore secret name
+
+blocks:
+  - name: Build and Push
+    task:
+      jobs:
+        - name: Build and Push Docker Image
+          commands:
+          
+            - checkout
+            # Install Docker Buildx
+            - docker login registry.digitalocean.com -u "$DOCKER_USERNAME" -p "$DOCR_TOKEN"
+
+            # Check if Dockerfile and context files are present
+            - ls -la
+
+            # Build the Docker image with detailed logging
+            - docker build --progress=plain -t registry.digitalocean.com/ungate/chitti:latest .
+
+            # Push the image to the registry
+            - docker push registry.digitalocean.com/ungate/chitti:latest
