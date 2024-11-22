@@ -115,15 +115,16 @@ export class TwitterInteractionClient {
                     SearchMode.Latest
                 )
             ).tweets;
-
+            // de-duplicate tweetCandidates with a set
             const uniqueTweetCandidates = [...new Set(tweetCandidates)]
+                // Sort tweet candidates by ID in ascending order
                 .sort((a, b) => a.id.localeCompare(b.id))
                 .filter(
                     (tweet) =>
                         tweet.userId !== this.client.profile.id &&
                         !this.isSpam(tweet)
                 );
-
+            // for each tweet candidate, handle the tweet
             for (const tweet of uniqueTweetCandidates) {
                 if (
                     !this.client.lastCheckedTweetId ||
@@ -166,10 +167,12 @@ export class TwitterInteractionClient {
                         thread,
                     });
 
+                    // Update the last checked tweet ID after processing each tweet
                     this.client.lastCheckedTweetId = parseInt(tweet.id);
                 }
             }
 
+            // Save the latest checked tweet ID to the file
             await this.client.cacheLatestCheckedTweetId();
 
             elizaLogger.log("Finished checking Twitter interactions");
@@ -188,6 +191,8 @@ export class TwitterInteractionClient {
         thread: Tweet[];
     }) {
         if (tweet.userId === this.client.profile.id) {
+            // console.log("skipping tweet from bot itself", tweet.id);
+            // Skip processing if the tweet is from the bot itself
             return;
         }
 
@@ -205,6 +210,8 @@ export class TwitterInteractionClient {
         const currentPost = formatTweet(tweet);
 
         let homeTimeline: Tweet[] = [];
+        // read the file if it exists
+
         const cachedTimeline = await this.client.getCachedTimeline();
         if (cachedTimeline) {
             homeTimeline = cachedTimeline;
@@ -213,6 +220,7 @@ export class TwitterInteractionClient {
             await this.client.cacheTimeline(homeTimeline);
         }
 
+        elizaLogger.debug("Thread: ", thread);
         const formattedConversation = thread
             .map(
                 (tweet) => `@${tweet.username} (${new Date(
@@ -226,6 +234,8 @@ export class TwitterInteractionClient {
         ${tweet.text}`
             )
             .join("\n\n");
+
+        elizaLogger.debug("formattedConversation: ", formattedConversation);
 
         const formattedHomeTimeline =
             `# ${this.runtime.character.name}'s Home Timeline\n\n` +
@@ -243,11 +253,13 @@ export class TwitterInteractionClient {
             timeline: formattedHomeTimeline,
         });
 
+        // check if the tweet exists, save if it doesn't
         const tweetId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
         const tweetExists =
             await this.runtime.messageManager.getMemoryById(tweetId);
 
         if (!tweetExists) {
+            elizaLogger.log("tweet does not exist, saving");
             const userIdUUID = stringToUuid(tweet.userId as string);
             const roomId = stringToUuid(tweet.conversationId);
 
@@ -287,6 +299,7 @@ export class TwitterInteractionClient {
             modelClass: ModelClass.MEDIUM,
         });
 
+        // Promise<"RESPOND" | "IGNORE" | "STOP" | null> {
         if (shouldRespond !== "RESPOND") {
             elizaLogger.log("Not responding to message");
             return { text: "Response Decision:", action: shouldRespond };
@@ -300,6 +313,8 @@ export class TwitterInteractionClient {
                 this.runtime.character?.templates?.messageHandlerTemplate ||
                 twitterMessageHandlerTemplate,
         });
+
+        elizaLogger.debug("Interactions prompt:\n" + context);
 
         const response = await generateMessageResponse({
             runtime: this.runtime,
@@ -356,7 +371,12 @@ export class TwitterInteractionClient {
                     responseMessages,
                     state
                 );
+                const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
 
+                await this.runtime.cacheManager.set(
+                    `twitter/tweet_generation_${tweet.id}.txt`,
+                    responseInfo
+                );
                 await wait();
             } catch (error) {
                 elizaLogger.error(`Error sending response tweet: ${error}`);
@@ -364,6 +384,147 @@ export class TwitterInteractionClient {
         }
     }
 
+    /**
+     * This method ensures conversation threads are properly built
+     */
+    async buildConversationThread(
+        tweet: Tweet,
+        maxReplies: number = 10
+    ): Promise<Tweet[]> {
+        const thread: Tweet[] = [];
+        const visited: Set<string> = new Set();
+
+        async function processThread(currentTweet: Tweet, depth: number = 0) {
+            elizaLogger.log("Processing tweet:", {
+                id: currentTweet.id,
+                inReplyToStatusId: currentTweet.inReplyToStatusId,
+                depth: depth,
+            });
+            if (!currentTweet) {
+                elizaLogger.log("No current tweet found for thread building");
+                return;
+            }
+
+            if (depth >= maxReplies) {
+                elizaLogger.log("Reached maximum reply depth", depth);
+                return;
+            }
+
+            // Handle memory storage
+            const memory = await this.runtime.messageManager.getMemoryById(
+                stringToUuid(currentTweet.id + "-" + this.runtime.agentId)
+            );
+            if (!memory) {
+                const roomId = stringToUuid(
+                    currentTweet.conversationId + "-" + this.runtime.agentId
+                );
+                const userId = stringToUuid(currentTweet.userId);
+
+                await this.runtime.ensureConnection(
+                    userId,
+                    roomId,
+                    currentTweet.username,
+                    currentTweet.name,
+                    "twitter"
+                );
+
+                this.runtime.messageManager.createMemory({
+                    id: stringToUuid(
+                        currentTweet.id + "-" + this.runtime.agentId
+                    ),
+                    agentId: this.runtime.agentId,
+                    content: {
+                        text: currentTweet.text,
+                        source: "twitter",
+                        url: currentTweet.permanentUrl,
+                        inReplyTo: currentTweet.inReplyToStatusId
+                            ? stringToUuid(
+                                  currentTweet.inReplyToStatusId +
+                                      "-" +
+                                      this.runtime.agentId
+                              )
+                            : undefined,
+                    },
+                    createdAt: currentTweet.timestamp * 1000,
+                    roomId,
+                    userId:
+                        currentTweet.userId === this.client.profile.id
+                            ? this.runtime.agentId
+                            : stringToUuid(currentTweet.userId),
+                    embedding: embeddingZeroVector,
+                });
+            }
+
+            if (visited.has(currentTweet.id)) {
+                elizaLogger.log("Already visited tweet:", currentTweet.id);
+                return;
+            }
+
+            visited.add(currentTweet.id);
+            thread.unshift(currentTweet);
+
+            elizaLogger.debug("Current thread state:", {
+                length: thread.length,
+                currentDepth: depth,
+                tweetId: currentTweet.id,
+            });
+
+            if (currentTweet.inReplyToStatusId) {
+                elizaLogger.log(
+                    "Fetching parent tweet:",
+                    currentTweet.inReplyToStatusId
+                );
+                try {
+                    const parentTweet =
+                        await this.client.twitterClient.getTweet(
+                            currentTweet.inReplyToStatusId
+                        );
+
+                    if (parentTweet) {
+                        elizaLogger.log("Found parent tweet:", {
+                            id: parentTweet.id,
+                            text: parentTweet.text?.slice(0, 50),
+                        });
+                        await processThread(parentTweet, depth + 1);
+                    } else {
+                        elizaLogger.log(
+                            "No parent tweet found for:",
+                            currentTweet.inReplyToStatusId
+                        );
+                    }
+                } catch (error) {
+                    elizaLogger.log("Error fetching parent tweet:", {
+                        tweetId: currentTweet.inReplyToStatusId,
+                        error,
+                    });
+                }
+            } else {
+                elizaLogger.log(
+                    "Reached end of reply chain at:",
+                    currentTweet.id
+                );
+            }
+        }
+
+        // Need to bind this context for the inner function
+        await processThread.bind(this)(tweet, 0);
+
+        elizaLogger.debug("Final thread built:", {
+            totalTweets: thread.length,
+            tweetIds: thread.map((t) => ({
+                id: t.id,
+                text: t.text?.slice(0, 50),
+            })),
+        });
+
+        return thread;
+    }
+
+    /**
+     * Determines if a tweet is spam using basic heuristics
+     * @param tweet The tweet object to analyze
+     * @returns Whether the tweet is likely spam
+     */
     private isSpam(tweet: Tweet): boolean {
         const spamIndicators = [
             tweet.text.includes("promotion"),
@@ -375,7 +536,7 @@ export class TwitterInteractionClient {
 
         const isNewAccount =
             new Date().getTime() - new Date(tweet.timestamp).getTime() <
-            7 * 24 * 60 * 60 * 1000;
+            7 * 24 * 60 * 60 * 1000; // Account is less than 7 days old
 
         return spamIndicators.some((indicator) => indicator) || isNewAccount;
     }
