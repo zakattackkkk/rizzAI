@@ -17,6 +17,7 @@ import {
 import { ClientBase } from "./base";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
 import { embeddingZeroVector } from "@ai16z/eliza";
+import TwitterApi from "twitter-api-v2";
 
 export const twitterMessageHandlerTemplate =
     `{{timeline}}
@@ -92,59 +93,113 @@ export class TwitterInteractionClient {
     }
 
     async start() {
-        const handleTwitterInteractionsLoop = () => {
-            this.handleTwitterInteractions();
-            setTimeout(
-                handleTwitterInteractionsLoop,
-                (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
-            ); // Random interval between 2-5 minutes
-        };
-        handleTwitterInteractionsLoop();
+        // const handleTwitterInteractionsLoop = () => {
+        //     this.handleTwitterInteractions();
+        //     setTimeout(
+        //         handleTwitterInteractionsLoop,
+        //         (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
+        //     ); // Random interval between 2-5 minutes
+        // };
+        // handleTwitterInteractionsLoop();
     }
 
     async handleTwitterInteractions() {
         elizaLogger.log("Checking Twitter interactions");
 
         const twitterUsername = this.client.profile.username;
+        const useV2API = true;
+
         try {
-            // Check for mentions
-            const tweetCandidates = (
-                await this.client.twitterClient.fetchSearchTweets(
+            let tweetCandidates: any[] = [];
+
+            if (useV2API) {
+                elizaLogger.debug(
+                    "Using Twitter API v2 for fetching interactions."
+                );
+
+                const twitterClientV2 = new TwitterApi({
+                    appKey:
+                        this.runtime.getSetting("TWITTER_API_KEY") ||
+                        process.env.TWITTER_API_KEY,
+                    appSecret:
+                        this.runtime.getSetting("TWITTER_API_SECRET_KEY") ||
+                        process.env.TWITTER_API_SECRET_KEY,
+                    accessToken:
+                        this.runtime.getSetting("TWITTER_ACCESS_TOKEN") ||
+                        process.env.TWITTER_ACCESS_TOKEN,
+                    accessSecret:
+                        this.runtime.getSetting(
+                            "TWITTER_ACCESS_TOKEN_SECRET"
+                        ) || process.env.TWITTER_ACCESS_TOKEN_SECRET,
+                });
+
+                // Fetch mentions (v2)
+                const mentionsResponse = await twitterClientV2.v2.search(
                     `@${twitterUsername}`,
-                    20,
-                    SearchMode.Latest
-                )
-            ).tweets;
+                    {
+                        max_results: 10,
+                        expansions: ["author_id", "in_reply_to_user_id"],
+                    }
+                );
+                tweetCandidates = mentionsResponse.data?.data || [];
+                tweetCandidates = await this.client.twitterClient.getTweetsV2(
+                    tweetCandidates.map((t) => t.id)
+                );
+            } else {
+                elizaLogger.debug(
+                    "Using Twitter API v1 for fetching interactions."
+                );
 
-            // de-duplicate tweetCandidates with a set
-            const uniqueTweetCandidates = [...new Set(tweetCandidates)];
-            // Sort tweet candidates by ID in ascending order
-            uniqueTweetCandidates
-                .sort((a, b) => a.id.localeCompare(b.id))
-                .filter((tweet) => tweet.userId !== this.client.profile.id);
+                // Fetch mentions (v1)
+                const mentionsResponse =
+                    await this.client.twitterClient.fetchSearchTweets(
+                        `@${twitterUsername}`,
+                        5,
+                        SearchMode.Latest
+                    );
+                tweetCandidates = mentionsResponse.tweets || [];
+            }
 
-            // for each tweet candidate, handle the tweet
-            for (const tweet of uniqueTweetCandidates) {
+            // Deduplicate tweetCandidates
+            const uniqueTweetCandidates = [
+                ...new Map(
+                    tweetCandidates.map((tweet) => [tweet.id, tweet])
+                ).values(),
+            ];
+
+            // Sort tweet candidates by ID in ascending order and filter out tweets from self
+            const filteredTweetCandidates = uniqueTweetCandidates
+                .sort((a, b) => parseInt(a.id) - parseInt(b.id))
+                .filter((tweet) => {
+                    return tweet.userId !== this.client.profile.id;
+                });
+
+            for (const tweet of filteredTweetCandidates) {
+                const tweetId = parseInt(tweet.id);
                 if (
                     !this.client.lastCheckedTweetId ||
-                    parseInt(tweet.id) > this.client.lastCheckedTweetId
+                    tweetId > this.client.lastCheckedTweetId
                 ) {
                     elizaLogger.log("New Tweet found", tweet.permanentUrl);
 
                     const roomId = stringToUuid(
-                        tweet.conversationId + "-" + this.runtime.agentId
+                        tweet.id + "-" + this.runtime.agentId
                     );
 
+                    const authorId = tweet.userId;
                     const userIdUUID =
-                        tweet.userId === this.client.profile.id
+                        authorId === this.client.profile.id
                             ? this.runtime.agentId
-                            : stringToUuid(tweet.userId!);
+                            : stringToUuid(authorId!);
+
+                    const username = tweet.username;
+                    const name = tweet.name;
 
                     await this.runtime.ensureConnection(
                         userIdUUID,
                         roomId,
-                        tweet.username,
-                        tweet.name,
+                        username,
+                        name,
                         "twitter"
                     );
 
@@ -167,7 +222,7 @@ export class TwitterInteractionClient {
                     });
 
                     // Update the last checked tweet ID after processing each tweet
-                    this.client.lastCheckedTweetId = parseInt(tweet.id);
+                    this.client.lastCheckedTweetId = tweetId;
                 }
             }
 
