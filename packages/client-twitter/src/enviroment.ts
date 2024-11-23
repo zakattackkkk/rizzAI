@@ -5,10 +5,14 @@ export const twitterEnvSchema = z.object({
     TWITTER_DRY_RUN: z
         .string()
         .transform((val) => val.toLowerCase() === "true"),
-    TWITTER_USERNAME: z.string().min(1, "Twitter username is required"),
-    TWITTER_PASSWORD: z.string().min(1, "Twitter password is required"),
-    TWITTER_EMAIL: z.string().email("Valid Twitter email is required"),
+    TWITTER_USERNAME: z.string().optional(),
+    TWITTER_PASSWORD: z.string().optional(),
+    TWITTER_EMAIL: z.string().optional(),
     TWITTER_COOKIES: z.string().optional(),
+    TWITTER_API_KEY: z.string().optional(),
+    TWITTER_API_SECRET_KEY: z.string().optional(),
+    TWITTER_ACCESS_TOKEN: z.string().optional(),
+    TWITTER_ACCESS_TOKEN_SECRET: z.string().optional(),
 });
 
 export type TwitterConfig = z.infer<typeof twitterEnvSchema>;
@@ -33,6 +37,18 @@ export async function validateTwitterConfig(
             TWITTER_COOKIES:
                 runtime.getSetting("TWITTER_COOKIES") ||
                 process.env.TWITTER_COOKIES,
+            TWITTER_API_KEY:
+                runtime.getSetting("TWITTER_API_KEY") ||
+                process.env.TWITTER_API_KEY,
+            TWITTER_API_SECRET_KEY:
+                runtime.getSetting("TWITTER_API_SECRET_KEY") ||
+                process.env.TWITTER_API_SECRET_KEY,
+            TWITTER_ACCESS_TOKEN:
+                runtime.getSetting("TWITTER_ACCESS_TOKEN") ||
+                process.env.TWITTER_ACCESS_TOKEN,
+            TWITTER_ACCESS_TOKEN_SECRET:
+                runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET") ||
+                process.env.TWITTER_ACCESS_TOKEN_SECRET,
         };
 
         return twitterEnvSchema.parse(config);

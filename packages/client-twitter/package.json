@@ -6,11 +6,12 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@ai16z/eliza": "workspace:*",
-        "agent-twitter-client": "0.0.13",
+        "agent-twitter-client": "0.0.14",
         "glob": "11.0.0",
         "zod": "3.23.8"
     },
     "devDependencies": {
+        "@ai16z/eliza": "workspace:*",
         "tsup": "^8.3.5"
     },
     "scripts": {

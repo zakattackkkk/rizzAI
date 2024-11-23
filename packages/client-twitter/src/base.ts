@@ -159,9 +159,10 @@ export class ClientBase extends EventEmitter {
 
     async init() {
         const username = this.runtime.getSetting("TWITTER_USERNAME");
+        const apiKey = this.runtime.getSetting("TWITTER_API_KEY");
 
-        if (!username) {
-            throw new Error("Twitter username not configured");
+        if (!username && !apiKey) {
+            throw new Error("Twitter username or apiKey not configured");
         }
 
         // Check for Twitter cookies
@@ -607,6 +608,21 @@ export class ClientBase extends EventEmitter {
         const cached = await this.getCachedProfile(username);
 
         if (cached) return cached;
+
+        // try {
+        //     // Fetch profile by username
+        //     const user = await this.twitterClient.getU userByUsername(username);
+        //     return {
+        //         id: user.data.id,
+        //         username: user.data.username,
+        //         screenName: user.data.name,
+        //         bio: user.data.description,
+        //         nicknames: [user.data.name], // Add logic to infer nicknames if necessary
+        //     };
+        // } catch (error) {
+        //     console.error('Error fetching profile:', error);
+        //     return null;
+        // }
 
         try {
             const profile = await this.requestQueue.add(async () => {
