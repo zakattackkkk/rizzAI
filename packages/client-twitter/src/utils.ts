@@ -120,7 +120,7 @@ export async function buildConversationThread(
                 currentTweet.inReplyToStatusId
             );
             try {
-                const parentTweet = await client.twitterClient.getTweet(
+                const parentTweet = await client.getTweet(
                     currentTweet.inReplyToStatusId
                 );
 
@@ -175,34 +175,50 @@ export async function sendTweet(
     let previousTweetId = inReplyTo;
 
     for (const chunk of tweetChunks) {
-        const result = await client.requestQueue.add(
-            async () =>
-                await client.twitterClient.sendTweet(
-                    chunk.trim(),
-                    previousTweetId
-                )
-        );
-        // Parse the response
-        const body = await result.json();
-        const tweetResult = body.data.create_tweet.tweet_results.result;
+        let finalTweet: Tweet;
+        const hasV2Settings =
+            this.runtime.getSetting("TWITTER_API_KEY") &&
+            this.runtime.getSetting("TWITTER_API_SECRET_KEY") &&
+            this.runtime.getSetting("TWITTER_ACCESS_TOKEN") &&
+            this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET");
+        if (hasV2Settings) {
+            // v2 logic
+            finalTweet = await client.requestQueue.add(
+                async () =>
+                    await client.twitterClient.sendTweetV2(
+                        chunk.trim(),
+                        previousTweetId
+                    )
+            );
+        } else {
+            const result = await client.requestQueue.add(
+                async () =>
+                    await client.twitterClient.sendTweet(
+                        chunk.trim(),
+                        previousTweetId
+                    )
+            );
+            // Parse the response
+            const body = await result.json();
+            const tweetResult = body.data.create_tweet.tweet_results.result;
 
-        const finalTweet: Tweet = {
-            id: tweetResult.rest_id,
-            text: tweetResult.legacy.full_text,
-            conversationId: tweetResult.legacy.conversation_id_str,
-            //createdAt:
-            timestamp: tweetResult.timestamp * 1000,
-            userId: tweetResult.legacy.user_id_str,
-            inReplyToStatusId: tweetResult.legacy.in_reply_to_status_id_str,
-            permanentUrl: `https://twitter.com/${twitterUsername}/status/${tweetResult.rest_id}`,
-            hashtags: [],
-            mentions: [],
-            photos: [],
-            thread: [],
-            urls: [],
-            videos: [],
-        };
-
+            finalTweet = {
+                id: tweetResult.rest_id,
+                text: tweetResult.legacy.full_text,
+                conversationId: tweetResult.legacy.conversation_id_str,
+                //createdAt:
+                timestamp: tweetResult.timestamp * 1000,
+                userId: tweetResult.legacy.user_id_str,
+                inReplyToStatusId: tweetResult.legacy.in_reply_to_status_id_str,
+                permanentUrl: `https://twitter.com/${twitterUsername}/status/${tweetResult.rest_id}`,
+                hashtags: [],
+                mentions: [],
+                photos: [],
+                thread: [],
+                urls: [],
+                videos: [],
+            };
+        }
         sentTweets.push(finalTweet);
         previousTweetId = finalTweet.id;
 

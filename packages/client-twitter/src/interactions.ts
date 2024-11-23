@@ -109,7 +109,7 @@ export class TwitterInteractionClient {
         try {
             // Check for mentions
             const tweetCandidates = (
-                await this.client.fetchSearchTweets(
+                await this.client.twitterClient.fetchSearchTweets(
                     `@${twitterUsername}`,
                     20,
                     SearchMode.Latest
@@ -215,7 +215,10 @@ export class TwitterInteractionClient {
         if (cachedTimeline) {
             homeTimeline = cachedTimeline;
         } else {
-            homeTimeline = await this.client.fetchHomeTimeline(50);
+            homeTimeline = await this.client.twitterClient.fetchHomeTimeline(
+                50,
+                homeTimeline.map((t) => t.id)
+            );
             await this.client.cacheTimeline(homeTimeline);
         }
 
@@ -473,10 +476,9 @@ export class TwitterInteractionClient {
                     currentTweet.inReplyToStatusId
                 );
                 try {
-                    const parentTweet = await this.twitterClient.getTweet(
+                    const parentTweet = await this.getTweet(
                         currentTweet.inReplyToStatusId
                     );
-
                     if (parentTweet) {
                         elizaLogger.log("Found parent tweet:", {
                             id: parentTweet.id,

@@ -133,7 +133,11 @@ export class TwitterPostClient {
             if (cachedTimeline) {
                 homeTimeline = cachedTimeline;
             } else {
-                homeTimeline = await this.client.fetchHomeTimeline(10);
+                homeTimeline =
+                    await this.client.twitterClient.fetchHomeTimeline(
+                        10,
+                        homeTimeline.map((t) => t.id)
+                    );
                 await this.client.cacheTimeline(homeTimeline);
             }
             const formattedHomeTimeline =
@@ -194,41 +198,61 @@ export class TwitterPostClient {
 
             try {
                 elizaLogger.log(`Posting new tweet:\n ${content}`);
+                let tweet: Tweet;
+                const hasV2Settings =
+                    this.runtime.getSetting("TWITTER_API_KEY") &&
+                    this.runtime.getSetting("TWITTER_API_SECRET_KEY") &&
+                    this.runtime.getSetting("TWITTER_ACCESS_TOKEN") &&
+                    this.runtime.getSetting("TWITTER_ACCESS_TOKEN_SECRET");
+                if (hasV2Settings) {
+                    // v2 logic
+                    this.client;
+                    tweet = await this.client.requestQueue.add(
+                        async () =>
+                            await this.client.twitterClient.sendTweetV2(content)
+                    );
+                } else {
+                    const result = await this.client.requestQueue.add(
+                        async () =>
+                            await this.client.twitterClient.sendTweet(content)
+                    );
+                    const body = await result.json();
+                    const tweetResult =
+                        body.data.create_tweet.tweet_results.result;
 
-                const result = await this.client.requestQueue.add(
-                    async () =>
-                        await this.client.twitterClient.sendTweet(content)
-                );
-                const body = await result.json();
-                const tweetResult = body.data.create_tweet.tweet_results.result;
+                    tweet = {
+                        id: tweetResult.rest_id,
+                        text: tweetResult.legacy.full_text,
+                        conversationId: tweetResult.legacy.conversation_id_str,
+                        createdAt: tweetResult.legacy.created_at,
+                        userId: tweetResult.legacy.user_id_str,
+                        inReplyToStatusId:
+                            tweetResult.legacy.in_reply_to_status_id_str,
+                        permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
+                        hashtags: [],
+                        mentions: [],
+                        photos: [],
+                        thread: [],
+                        urls: [],
+                        videos: [],
+                    } as Tweet;
+                }
+                const postId = tweet.id;
+                const conversationId =
+                    tweet.conversationId + "-" + this.runtime.agentId;
+                // await this.runtime..set(
+                //     `twitter/${this.client.profile.username}/lastPost`,
+                //     {
+                //         id: tweet.id,
+                //         timestamp: Date.now(),
+                //     }
+                // );
 
-                // console.dir({ tweetResult }, { depth: Infinity });
-                const tweet = {
-                    id: tweetResult.rest_id,
-                    name: this.client.profile.screenName,
-                    username: this.client.profile.username,
-                    text: tweetResult.legacy.full_text,
-                    conversationId: tweetResult.legacy.conversation_id_str,
-                    createdAt: tweetResult.legacy.created_at,
-                    userId: this.client.profile.id,
-                    inReplyToStatusId:
-                        tweetResult.legacy.in_reply_to_status_id_str,
-                    permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
-                    hashtags: [],
-                    mentions: [],
-                    photos: [],
-                    thread: [],
-                    urls: [],
-                    videos: [],
-                } as Tweet;
+                await this.client.cacheTweet(tweet);
 
-                await this.runtime.cacheManager.set(
-                    `twitter/${this.client.profile.username}/lastPost`,
-                    {
-                        id: tweet.id,
-                        timestamp: Date.now(),
-                    }
-                );
+                homeTimeline.push(tweet);
+                await this.client.cacheTimeline(homeTimeline);
+                elizaLogger.log(`Tweet posted:\n ${tweet.permanentUrl}`);
 
                 await this.client.cacheTweet(tweet);
 
