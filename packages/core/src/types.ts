@@ -583,6 +583,7 @@ export enum Clients {
     DIRECT = "direct",
     TWITTER = "twitter",
     TELEGRAM = "telegram",
+    WARPCAST = "warpcast",
 }
 /**
  * Configuration for an agent character
@@ -623,6 +624,10 @@ export type Character = {
         discordVoiceHandlerTemplate?: string;
         discordShouldRespondTemplate?: string;
         discordMessageHandlerTemplate?: string;
+        warpcastSearchTemplate?: string;
+        warpcastPostTemplate?: string;
+        warpcastMessageHandlerTemplate?: string;
+        warpcastShouldRespondTemplate?: string;
     };
 
     /** Character biography */

@@ -5,6 +5,7 @@ import { DiscordClientInterface } from "@ai16z/client-discord";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
+import { WarpcastClientInterface } from "@ai16z/client-warpcast";
 import {
     DbCacheAdapter,
     defaultCharacter,
@@ -216,6 +217,11 @@ export async function initializeClients(
         clients.push(twitterClients);
     }
 
+    if (clientTypes.includes("warpcast")) {
+        const warpcastClient = await WarpcastClientInterface.start(runtime);
+        clients.push(warpcastClient);
+    }
+
     if (character.plugins?.length > 0) {
         for (const plugin of character.plugins) {
             if (plugin.clients) {
@@ -250,10 +256,6 @@ export function createAgent(
             bootstrapPlugin,
             nodePlugin,
             character.settings.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
-            character.settings.secrets?.COINBASE_COMMERCE_KEY ||
-            process.env.COINBASE_COMMERCE_KEY
-                ? coinbaseCommercePlugin
-                : null,
         ].filter(Boolean),
         providers: [],
         actions: [],
