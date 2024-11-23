@@ -665,8 +665,8 @@ importers:
         specifier: workspace:*
         version: link:../adapter-supabase
       '@anthropic-ai/sdk':
-        specifier: 0.30.1
-        version: 0.30.1(encoding@0.1.13)
+        specifier: 0.32.1
+        version: 0.32.1(encoding@0.1.13)
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -1527,6 +1527,9 @@ packages:
 
   '@anthropic-ai/sdk@0.30.1':
     resolution: {integrity: sha512-nuKvp7wOIz6BFei8WrTdhmSsx5mwnArYyJgh4+vYu3V4J0Ltb8Xm3odPm51n1aSI0XxNCrDl7O88cxCtUdAkaw==}
+
+  '@anthropic-ai/sdk@0.32.1':
+    resolution: {integrity: sha512-U9JwTrDvdQ9iWuABVsMLj8nJVwAyQz6QXvgLsVhryhCEPkLsbcP/MXxm+jYcAwLoV8ESbaTTjnD4kuAFa+Hyjg==}
 
   '@anush008/tokenizers-darwin-universal@0.0.0':
     resolution: {integrity: sha512-SACpWEooTjFX89dFKRVUhivMxxcZRtA3nJGVepdLyrwTkQ1TZQ8581B5JoXp0TcTMHfgnDaagifvVoBiFEdNCQ==}
@@ -15208,6 +15211,18 @@ snapshots:
   '@antfu/utils@0.7.10': {}
 
   '@anthropic-ai/sdk@0.30.1(encoding@0.1.13)':
+    dependencies:
+      '@types/node': 18.19.64
+      '@types/node-fetch': 2.6.12
+      abort-controller: 3.0.0
+      agentkeepalive: 4.5.0
+      form-data-encoder: 1.7.2
+      formdata-node: 4.4.1
+      node-fetch: 2.7.0(encoding@0.1.13)
+    transitivePeerDependencies:
+      - encoding
+
+  '@anthropic-ai/sdk@0.32.1(encoding@0.1.13)':
     dependencies:
       '@types/node': 18.19.64
       '@types/node-fetch': 2.6.12
