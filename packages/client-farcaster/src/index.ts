@@ -1,30 +1,24 @@
-import { TwitterPostClient } from "./post.ts";
-import { TwitterSearchClient } from "./search.ts";
-import { TwitterInteractionClient } from "./interactions.ts";
+import { FarcasterPostClient } from "./post.ts";
+import { FarcasterInteractionClient } from "./interactions.ts";
 import { IAgentRuntime, Client } from "@ai16z/eliza";
 
-class TwitterAllClient {
-    post: TwitterPostClient;
-    search: TwitterSearchClient;
-    interaction: TwitterInteractionClient;
+class FarcasterAllClient {
+    post: FarcasterPostClient;
+    interaction: FarcasterInteractionClient;
     constructor(runtime: IAgentRuntime) {
-        this.post = new TwitterPostClient(runtime);
-        // this.search = new TwitterSearchClient(runtime); // don't start the search client by default
-        // this searches topics from character file, but kind of violates consent of random users
-        // burns your rate limit and can get your account banned
-        // use at your own risk
-        this.interaction = new TwitterInteractionClient(runtime);
+        this.post = new FarcasterPostClient(runtime);
+        this.interaction = new FarcasterInteractionClient(runtime);
     }
 }
 
-export const TwitterClientInterface: Client = {
+export const FarcasterClientInterface: Client = {
     async start(runtime: IAgentRuntime) {
-        console.log("Twitter client started");
-        return new TwitterAllClient(runtime);
+        console.log("Farcaster client started");
+        return new FarcasterAllClient(runtime);
     },
     async stop(runtime: IAgentRuntime) {
-        console.warn("Twitter client does not support stopping yet");
+        console.warn("Farcaster client does not support stopping yet");
     },
 };
 
-export default TwitterClientInterface;
+export default FarcasterClientInterface;

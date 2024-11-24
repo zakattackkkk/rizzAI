@@ -1,13 +1,13 @@
 // utils.ts
 
-import { Tweet } from "agent-twitter-client";
+import { Cast } from "./agent-farcaster-client/casts.ts";
 import { embeddingZeroVector } from "@ai16z/eliza";
 import { Content, Memory, UUID } from "@ai16z/eliza";
 import { stringToUuid } from "@ai16z/eliza";
 import { ClientBase } from "./base.ts";
 import { elizaLogger } from "@ai16z/eliza";
 
-const MAX_TWEET_LENGTH = 280; // Updated to Twitter's current character limit
+const MAX_CAST_LENGTH = 280; // Updated to Twitter's current character limit
 
 export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
     const waitTime =
@@ -15,7 +15,7 @@ export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
     return new Promise((resolve) => setTimeout(resolve, waitTime));
 };
 
-export const isValidTweet = (tweet: Tweet): boolean => {
+export const isValidTweet = (tweet: Cast): boolean => {
     // Filter out tweets with too many hashtags, @s, or $ signs, probably spam or garbage
     const hashtagCount = (tweet.text?.match(/#/g) || []).length;
     const atCount = (tweet.text?.match(/@/g) || []).length;
@@ -31,14 +31,14 @@ export const isValidTweet = (tweet: Tweet): boolean => {
 };
 
 export async function buildConversationThread(
-    tweet: Tweet,
+    tweet: Cast,
     client: ClientBase,
     maxReplies: number = 10
-): Promise<Tweet[]> {
-    const thread: Tweet[] = [];
+): Promise<Cast[]> {
+    const thread: Cast[] = [];
     const visited: Set<string> = new Set();
 
-    async function processThread(currentTweet: Tweet, depth: number = 0) {
+    async function processThread(currentTweet: Cast, depth: number = 0) {
         elizaLogger.debug("Processing tweet:", {
             id: currentTweet.id,
             inReplyToStatusId: currentTweet.inReplyToStatusId,
@@ -71,7 +71,7 @@ export async function buildConversationThread(
                 roomId,
                 currentTweet.username,
                 currentTweet.name,
-                "twitter"
+                "farcaster"
             );
 
             client.runtime.messageManager.createMemory({
@@ -81,14 +81,14 @@ export async function buildConversationThread(
                 agentId: client.runtime.agentId,
                 content: {
                     text: currentTweet.text,
-                    source: "twitter",
+                    source: "farcaster",
                     url: currentTweet.permanentUrl,
                     inReplyTo: currentTweet.inReplyToStatusId
                         ? stringToUuid(
-                              currentTweet.inReplyToStatusId +
-                                  "-" +
-                                  client.runtime.agentId
-                          )
+                            currentTweet.inReplyToStatusId +
+                            "-" +
+                            client.runtime.agentId
+                        )
                         : undefined,
                 },
                 createdAt: currentTweet.timestamp * 1000,
@@ -122,7 +122,7 @@ export async function buildConversationThread(
                 currentTweet.inReplyToStatusId
             );
             try {
-                const parentTweet = await client.twitterClient.getTweet(
+                const parentTweet = await client.farcasterClient.getTweet(
                     currentTweet.inReplyToStatusId
                 );
 
@@ -169,44 +169,44 @@ export async function sendTweet(
     client: ClientBase,
     content: Content,
     roomId: UUID,
-    twitterUsername: string,
     inReplyTo: string
 ): Promise<Memory[]> {
     const tweetChunks = splitTweetContent(content.text);
-    const sentTweets: Tweet[] = [];
+    const sentTweets: Cast[] = [];
     let previousTweetId = inReplyTo;
 
     for (const chunk of tweetChunks) {
-        const result = await client.requestQueue.add(
+        const castResult = await client.requestQueue.add(
             async () =>
-                await client.twitterClient.sendTweet(
+                await client.farcasterClient.sendCast(
                     chunk.trim(),
                     previousTweetId
                 )
         );
         // Parse the response
-        const body = await result.json();
-        const tweetResult = body.data.create_tweet.tweet_results.result;
+        if (!castResult) {
+            console.error("Error sending cast:", castResult);
+            return;
+        }
 
-        const finalTweet: Tweet = {
-            id: tweetResult.rest_id,
-            text: tweetResult.legacy.full_text,
-            conversationId: tweetResult.legacy.conversation_id_str,
-            //createdAt:
-            timestamp: tweetResult.timestamp * 1000,
-            userId: tweetResult.legacy.user_id_str,
-            inReplyToStatusId: tweetResult.legacy.in_reply_to_status_id_str,
-            permanentUrl: `https://twitter.com/${twitterUsername}/status/${tweetResult.rest_id}`,
-            hashtags: [],
-            mentions: [],
-            photos: [],
-            thread: [],
-            urls: [],
-            videos: [],
+        const cast: Cast = {
+            id: castResult.hash, // Use the hash as the ID
+            text: castResult.text,
+            conversationId: null, // Not provided by the Neynar API
+            timestamp: new Date().getTime(), // not available by the Neynar API
+            userId: castResult.author.fid.toString(), // Author's FID as the user ID
+            inReplyToStatusId: null, // Not provided by the Neynar API
+            permanentUrl: `https://warpcast.com/${castResult.author.fid}/status/${castResult.hash}`,
+            hashtags: [], // No hashtags provided by the Neynar API
+            mentions: [], // No mentions provided by the Neynar API
+            photos: [], // No photos provided by the Neynar API
+            thread: [], // No thread data available by the Neynar API
+            urls: [], // No URLs provided by the Neynar API
+            videos: [] // No videos provided by the Neynar API
         };
 
-        sentTweets.push(finalTweet);
-        previousTweetId = finalTweet.id;
+        sentTweets.push(cast);
+        previousTweetId = cast.id;
 
         // Wait a bit between tweets to avoid rate limiting issues
         await wait(1000, 2000);
@@ -218,12 +218,12 @@ export async function sendTweet(
         userId: client.runtime.agentId,
         content: {
             text: tweet.text,
-            source: "twitter",
+            source: "farcaster",
             url: tweet.permanentUrl,
             inReplyTo: tweet.inReplyToStatusId
                 ? stringToUuid(
-                      tweet.inReplyToStatusId + "-" + client.runtime.agentId
-                  )
+                    tweet.inReplyToStatusId + "-" + client.runtime.agentId
+                )
                 : undefined,
         },
         roomId,
@@ -235,7 +235,7 @@ export async function sendTweet(
 }
 
 function splitTweetContent(content: string): string[] {
-    const maxLength = MAX_TWEET_LENGTH;
+    const maxLength = MAX_CAST_LENGTH;
     const paragraphs = content.split("\n\n").map((p) => p.trim());
     const tweets: string[] = [];
     let currentTweet = "";

@@ -6,15 +6,19 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@ai16z/eliza": "workspace:*",
-        "glob": "11.0.0",
-        "agent-twitter-client": "0.0.13"
+        "@neynar/nodejs-sdk": "^1.71.0",
+        "glob": "11.0.0"
     },
     "devDependencies": {
-        "tsup": "^8.3.5"
+        "tsup": "^8.3.5",
+        "typescript": "^5.6.3",
+        "vitest": "^2.1.3",
+        "dotenv": "^16.4.5"
     },
     "scripts": {
         "build": "tsup --format esm --dts",
-        "dev": "tsup --watch"
+        "dev": "tsup --watch",
+        "test": "vitest"
     },
     "peerDependencies": {
         "whatwg-url": "7.1.0"

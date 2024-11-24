@@ -1,5 +1,5 @@
-import { Profile } from './profile';
-import { Tweet } from './tweets';
+import { Profile } from './profile.ts';
+import { Cast } from './casts.ts';
 
 export interface FetchProfilesResponse {
   profiles: Profile[];
@@ -13,7 +13,7 @@ export type FetchProfiles = (
 ) => Promise<FetchProfilesResponse>;
 
 export interface FetchTweetsResponse {
-  tweets: Tweet[];
+  tweets: Cast[];
   next?: string;
 }
 
@@ -60,7 +60,7 @@ export async function* getTweetTimeline(
   query: string,
   maxTweets: number,
   fetchFunc: FetchTweets,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Cast, void> {
   let nTweets = 0;
   let cursor: string | undefined = undefined;
   while (nTweets < maxTweets) {

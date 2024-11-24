@@ -1,5 +1,4 @@
-import { SearchMode } from "./agentFarcasterClientSearch.ts";
-import { Tweet } from "./tweets.ts";
+import { Cast } from "./agent-farcaster-client/casts.ts";
 import fs from "fs";
 import { composeContext, elizaLogger } from "@ai16z/eliza";
 import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
@@ -24,7 +23,7 @@ export const twitterMessageHandlerTemplate =
 {{knowledge}}
 
 # Task: Generate a post for the character {{agentName}}.
-About {{agentName}} (@{{twitterUserName}}):
+About {{agentName}} (@{{farcasterUserName}}):
 {{bio}}
 {{lore}}
 {{topics}}
@@ -41,7 +40,7 @@ Recent interactions between {{agentName}} and other users:
 {{recentPosts}}
 
 
-# Task: Generate a post/reply in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}) while using the thread of tweets as additional context:
+# Task: Generate a post/reply in the voice, style and perspective of {{agentName}} (@{{farcasterUserName}}) while using the thread of tweets as additional context:
 Current Post:
 {{currentPost}}
 Thread of Tweets You Are Replying To:
@@ -50,12 +49,12 @@ Thread of Tweets You Are Replying To:
 
 {{actions}}
 
-# Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}). Include an action, if appropriate. {{actionNames}}:
+# Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{farcasterUserName}}). Include an action, if appropriate. {{actionNames}}:
 {{currentPost}}
 ` + messageCompletionFooter;
 
 export const twitterShouldRespondTemplate =
-    `# INSTRUCTIONS: Determine if {{agentName}} (@{{twitterUserName}}) should respond to the message and participate in the conversation. Do not comment. Just respond with "true" or "false".
+    `# INSTRUCTIONS: Determine if {{agentName}} (@{{farcasterUserName}}) should respond to the message and participate in the conversation. Do not comment. Just respond with "true" or "false".
 
 Response options are RESPOND, IGNORE and STOP .
 
@@ -70,27 +69,27 @@ If {{agentName}} concludes a conversation and isn't part of the conversation any
 
 {{recentPosts}}
 
-IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
+IMPORTANT: {{agentName}} (aka @{{farcasterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
 
 {{currentPost}}
 
-Thread of Tweets You Are Replying To:
+Thread of Casts You Are Replying To:
 
 {{formattedConversation}}
 
 # INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation.
 ` + shouldRespondFooter;
 
-export class TwitterInteractionClient extends ClientBase {
+export class FarcasterInteractionClient extends ClientBase {
     onReady() {
-        const handleTwitterInteractionsLoop = () => {
-            this.handleTwitterInteractions();
+        const handleFarcasterInteractionsLoop = () => {
+            this.handleFarcasterInteractions();
             setTimeout(
-                handleTwitterInteractionsLoop,
+                handleFarcasterInteractionsLoop,
                 (Math.floor(Math.random() * (5 - 2 + 1)) + 2) * 60 * 1000
             ); // Random interval between 2-5 minutes
         };
-        handleTwitterInteractionsLoop();
+        handleFarcasterInteractionsLoop();
     }
 
     constructor(runtime: IAgentRuntime) {
@@ -99,142 +98,139 @@ export class TwitterInteractionClient extends ClientBase {
         });
     }
 
-    async handleTwitterInteractions() {
-        elizaLogger.log("Checking Twitter interactions");
+    async handleFarcasterInteractions() {
+        elizaLogger.log("Checking Farcaster interactions");
         try {
             // Check for mentions
-            const tweetCandidates = (
-                await this.fetchSearchTweets(
-                    `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
-                    20,
-                    SearchMode.Latest
+            const castCandidates = (
+                await this.fetchSearchCasts(
+                    this.runtime.getSetting("FARCASTER_USERNAME"),
+                    10,
                 )
             ).tweets;
 
-            // de-duplicate tweetCandidates with a set
-            const uniqueTweetCandidates = [...new Set(tweetCandidates)];
+            // de-duplicate castCandidates with a set
+            const uniqueCastCandidates = [...new Set(castCandidates)];
 
-            // Sort tweet candidates by ID in ascending order
-            uniqueTweetCandidates
+            // Sort cast candidates by ID in ascending order
+            uniqueCastCandidates
                 .sort((a, b) => a.id.localeCompare(b.id))
-                .filter((tweet) => tweet.userId !== this.twitterUserId);
+                .filter((cast) => cast.userId !== this.farcasterUserFID);
 
-            // for each tweet candidate, handle the tweet
-            for (const tweet of uniqueTweetCandidates) {
-                // console.log("tweet:", tweet);
+            // for each cast candidate, handle the cast
+            for (const cast of uniqueCastCandidates) {
+                // console.log("cast:", cast);
                 if (
-                    !this.lastCheckedTweetId ||
-                    parseInt(tweet.id) > this.lastCheckedTweetId
+                    !this.lastCheckedCastId ||
+                    parseInt(cast.id) > this.lastCheckedCastId
                 ) {
                     const conversationId =
-                        tweet.conversationId + "-" + this.runtime.agentId;
+                        cast.conversationId + "-" + this.runtime.agentId;
 
                     const roomId = stringToUuid(conversationId);
 
-                    const userIdUUID = stringToUuid(tweet.userId as string);
+                    const userIdUUID = stringToUuid(cast.userId as string);
 
                     await this.runtime.ensureConnection(
                         userIdUUID,
                         roomId,
-                        tweet.username,
-                        tweet.name,
-                        "twitter"
+                        cast.username,
+                        cast.name,
+                        "farcaster"
                     );
 
-                    const thread = await buildConversationThread(tweet, this);
+                    const thread = await buildConversationThread(cast, this);
 
                     const message = {
-                        content: { text: tweet.text },
+                        content: { text: cast.text },
                         agentId: this.runtime.agentId,
                         userId: userIdUUID,
                         roomId,
                     };
 
                     await this.handleTweet({
-                        tweet,
+                        cast,
                         message,
                         thread,
                     });
 
-                    // Update the last checked tweet ID after processing each tweet
-                    this.lastCheckedTweetId = parseInt(tweet.id);
+                    // Update the last checked cast ID after processing each cast
+                    this.lastCheckedCastId = parseInt(cast.id);
 
                     try {
-                        if (this.lastCheckedTweetId) {
+                        if (this.lastCheckedCastId) {
                             fs.writeFileSync(
                                 this.tweetCacheFilePath,
-                                this.lastCheckedTweetId.toString(),
+                                this.lastCheckedCastId.toString(),
                                 "utf-8"
                             );
                         }
                     } catch (error) {
                         elizaLogger.error(
-                            "Error saving latest checked tweet ID to file:",
+                            "Error saving latest checked cast ID to file:",
                             error
                         );
                     }
                 }
             }
 
-            // Save the latest checked tweet ID to the file
+            // Save the latest checked cast ID to the file
             try {
-                if (this.lastCheckedTweetId) {
+                if (this.lastCheckedCastId) {
                     fs.writeFileSync(
                         this.tweetCacheFilePath,
-                        this.lastCheckedTweetId.toString(),
+                        this.lastCheckedCastId.toString(),
                         "utf-8"
                     );
                 }
             } catch (error) {
                 elizaLogger.error(
-                    "Error saving latest checked tweet ID to file:",
+                    "Error saving latest checked cast ID to file:",
                     error
                 );
             }
 
-            elizaLogger.log("Finished checking Twitter interactions");
+            elizaLogger.log("Finished checking Farcaster interactions");
         } catch (error) {
-            elizaLogger.error("Error handling Twitter interactions:", error);
+            elizaLogger.error("Error handling Farcaster interactions:", error);
         }
     }
 
     private async handleTweet({
-        tweet,
+        cast,
         message,
         thread,
     }: {
-        tweet: Tweet;
+        cast: Cast;
         message: Memory;
-        thread: Tweet[];
+        thread: Cast[];
     }) {
-        if (tweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
-            // console.log("skipping tweet from bot itself", tweet.id);
-            // Skip processing if the tweet is from the bot itself
+        if (cast.username === this.runtime.getSetting("FARCASTER_USERNAME")) {
+            console.log("skipping cast from bot itself", cast.id);
+            // Skip processing if the cast is from the bot itself
             return;
         }
 
         if (!message.content.text) {
-            elizaLogger.log("skipping tweet with no text", tweet.id);
+            elizaLogger.log("skipping cast with no text", cast.id);
             return { text: "", action: "IGNORE" };
         }
-        elizaLogger.log("handling tweet", tweet.id);
-        const formatTweet = (tweet: Tweet) => {
-            return `  ID: ${tweet.id}
-  From: ${tweet.name} (@${tweet.username})
-  Text: ${tweet.text}`;
+        elizaLogger.log("handling cast", cast.id);
+        const formatTweet = (cast: Cast) => {
+            return `ID: ${cast.id} From: ${cast.name} (@${cast.username}) Text: ${cast.text}`;
         };
-        const currentPost = formatTweet(tweet);
+        const currentPost = formatTweet(cast);
 
         let homeTimeline = [];
         // read the file if it exists
-        if (fs.existsSync("tweetcache/home_timeline.json")) {
+        if (fs.existsSync("castcache/home_timeline.json")) {
             homeTimeline = JSON.parse(
-                fs.readFileSync("tweetcache/home_timeline.json", "utf-8")
+                fs.readFileSync("castcache/home_timeline.json", "utf-8")
             );
         } else {
             homeTimeline = await this.fetchHomeTimeline(50);
             fs.writeFileSync(
-                "tweetcache/home_timeline.json",
+                "castcache/home_timeline.json",
                 JSON.stringify(homeTimeline, null, 2)
             );
         }
@@ -242,15 +238,15 @@ export class TwitterInteractionClient extends ClientBase {
         console.log("Thread: ", thread);
         const formattedConversation = thread
             .map(
-                (tweet) => `@${tweet.username} (${new Date(
-                    tweet.timestamp * 1000
+                (cast) => `@${cast.username} (${new Date(
+                    cast.timestamp * 1000
                 ).toLocaleString("en-US", {
                     hour: "2-digit",
                     minute: "2-digit",
                     month: "short",
                     day: "numeric",
                 })}):
-        ${tweet.text}`
+        ${cast.text}`
             )
             .join("\n\n");
 
@@ -259,38 +255,38 @@ export class TwitterInteractionClient extends ClientBase {
         const formattedHomeTimeline =
             `# ${this.runtime.character.name}'s Home Timeline\n\n` +
             homeTimeline
-                .map((tweet) => {
-                    return `ID: ${tweet.id}\nFrom: ${tweet.name} (@${tweet.username})${tweet.inReplyToStatusId ? ` In reply to: ${tweet.inReplyToStatusId}` : ""}\nText: ${tweet.text}\n---\n`;
+                .map((cast) => {
+                    return `ID: ${cast.id}\nFrom: ${cast.name} (@${cast.username})${cast.inReplyToStatusId ? ` In reply to: ${cast.inReplyToStatusId}` : ""}\nText: ${cast.text}\n---\n`;
                 })
                 .join("\n");
 
         let state = await this.runtime.composeState(message, {
-            twitterClient: this.twitterClient,
-            twitterUserName: this.runtime.getSetting("TWITTER_USERNAME"),
+            farcasterClient: this.farcasterClient,
+            farcasterUserName: this.runtime.getSetting("FARCASTER_USERNAME"),
             currentPost,
             formattedConversation,
             timeline: formattedHomeTimeline,
         });
 
-        // check if the tweet exists, save if it doesn't
-        const tweetId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
+        // check if the cast exists, save if it doesn't
+        const tweetId = stringToUuid(cast.id + "-" + this.runtime.agentId);
         const tweetExists =
             await this.runtime.messageManager.getMemoryById(tweetId);
 
         if (!tweetExists) {
-            elizaLogger.log("tweet does not exist, saving");
-            const userIdUUID = stringToUuid(tweet.userId as string);
-            const roomId = stringToUuid(tweet.conversationId);
+            elizaLogger.log("cast does not exist, saving");
+            const userIdUUID = stringToUuid(cast.userId as string);
+            const roomId = stringToUuid(cast.conversationId);
 
             const message = {
                 id: tweetId,
                 agentId: this.runtime.agentId,
                 content: {
-                    text: tweet.text,
-                    url: tweet.permanentUrl,
-                    inReplyTo: tweet.inReplyToStatusId
+                    text: cast.text,
+                    url: cast.permanentUrl,
+                    inReplyTo: cast.inReplyToStatusId
                         ? stringToUuid(
-                              tweet.inReplyToStatusId +
+                              cast.inReplyToStatusId +
                                   "-" +
                                   this.runtime.agentId
                           )
@@ -298,7 +294,7 @@ export class TwitterInteractionClient extends ClientBase {
                 },
                 userId: userIdUUID,
                 roomId,
-                createdAt: tweet.timestamp * 1000,
+                createdAt: cast.timestamp * 1000,
             };
             this.saveRequestMessage(message, state);
         }
@@ -344,7 +340,7 @@ export class TwitterInteractionClient extends ClientBase {
         const removeQuotes = (str: string) =>
             str.replace(/^['"](.*)['"]$/, "$1");
 
-        const stringId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
+        const stringId = stringToUuid(cast.id + "-" + this.runtime.agentId);
 
         response.inReplyTo = stringId;
 
@@ -357,8 +353,7 @@ export class TwitterInteractionClient extends ClientBase {
                         this,
                         response,
                         message.roomId,
-                        this.runtime.getSetting("TWITTER_USERNAME"),
-                        tweet.id
+                        response.inReplyTo
                     );
                     return memories;
                 };
@@ -390,36 +385,36 @@ export class TwitterInteractionClient extends ClientBase {
                     responseMessages,
                     state
                 );
-                const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
+                const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${cast.id} - ${cast.username}: ${cast.text}\nAgent's Output:\n${response.text}`;
                 // f tweets folder dont exist, create
                 if (!fs.existsSync("tweets")) {
                     fs.mkdirSync("tweets");
                 }
-                const debugFileName = `tweets/tweet_generation_${tweet.id}.txt`;
+                const debugFileName = `tweets/tweet_generation_${cast.id}.txt`;
                 fs.writeFileSync(debugFileName, responseInfo);
                 await wait();
             } catch (error) {
-                elizaLogger.error(`Error sending response tweet: ${error}`);
+                elizaLogger.error(`Error sending response cast: ${error}`);
             }
         }
     }
 
     async buildConversationThread(
-        tweet: Tweet,
+        cast: Cast,
         maxReplies: number = 10
-    ): Promise<Tweet[]> {
-        const thread: Tweet[] = [];
+    ): Promise<Cast[]> {
+        const thread: Cast[] = [];
         const visited: Set<string> = new Set();
 
-        async function processThread(currentTweet: Tweet, depth: number = 0) {
-            console.log("Processing tweet:", {
+        async function processThread(currentTweet: Cast, depth: number = 0) {
+            console.log("Processing cast:", {
                 id: currentTweet.id,
                 inReplyToStatusId: currentTweet.inReplyToStatusId,
                 depth: depth,
             });
 
             if (!currentTweet) {
-                console.log("No current tweet found for thread building");
+                console.log("No current cast found for thread building");
                 return;
             }
 
@@ -443,7 +438,7 @@ export class TwitterInteractionClient extends ClientBase {
                     roomId,
                     currentTweet.username,
                     currentTweet.name,
-                    "twitter"
+                    "farcaster"
                 );
 
                 this.runtime.messageManager.createMemory({
@@ -453,7 +448,7 @@ export class TwitterInteractionClient extends ClientBase {
                     agentId: this.runtime.agentId,
                     content: {
                         text: currentTweet.text,
-                        source: "twitter",
+                        source: "farcaster",
                         url: currentTweet.permanentUrl,
                         inReplyTo: currentTweet.inReplyToStatusId
                             ? stringToUuid(
@@ -474,7 +469,7 @@ export class TwitterInteractionClient extends ClientBase {
             }
 
             if (visited.has(currentTweet.id)) {
-                elizaLogger.log("Already visited tweet:", currentTweet.id);
+                elizaLogger.log("Already visited cast:", currentTweet.id);
                 return;
             }
 
@@ -489,28 +484,28 @@ export class TwitterInteractionClient extends ClientBase {
 
             if (currentTweet.inReplyToStatusId) {
                 console.log(
-                    "Fetching parent tweet:",
+                    "Fetching parent cast:",
                     currentTweet.inReplyToStatusId
                 );
                 try {
-                    const parentTweet = await this.twitterClient.getTweet(
+                    const parentTweet = await this.farcasterClient.getTweet(
                         currentTweet.inReplyToStatusId
                     );
 
                     if (parentTweet) {
-                        console.log("Found parent tweet:", {
+                        console.log("Found parent cast:", {
                             id: parentTweet.id,
                             text: parentTweet.text?.slice(0, 50),
                         });
                         await processThread(parentTweet, depth + 1);
                     } else {
                         console.log(
-                            "No parent tweet found for:",
+                            "No parent cast found for:",
                             currentTweet.inReplyToStatusId
                         );
                     }
                 } catch (error) {
-                    console.log("Error fetching parent tweet:", {
+                    console.log("Error fetching parent cast:", {
                         tweetId: currentTweet.inReplyToStatusId,
                         error,
                     });
@@ -521,7 +516,7 @@ export class TwitterInteractionClient extends ClientBase {
         }
 
         // Need to bind this context for the inner function
-        await processThread.bind(this)(tweet, 0);
+        await processThread.bind(this)(cast, 0);
 
         elizaLogger.debug("Final thread built:", {
             totalTweets: thread.length,

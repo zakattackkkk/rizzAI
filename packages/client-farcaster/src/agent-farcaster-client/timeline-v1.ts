@@ -1,7 +1,7 @@
-import { LegacyUserRaw, parseProfile, Profile } from './profile';
-import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
-import { PlaceRaw, Tweet } from './tweets';
-import { isFieldDefined } from './type-util';
+import { NeynarUser, parseProfile, Profile } from './profile.ts';
+import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util.ts';
+import { PlaceRaw, Cast } from './casts.ts';
+import { isFieldDefined } from './type-util.ts';
 
 export interface Hashtag {
   text?: string;
@@ -55,8 +55,7 @@ export interface SearchResultRaw {
   core?: {
     user_results?: {
       result?: {
-        is_blue_verified?: boolean;
-        legacy?: LegacyUserRaw;
+        legacy?: NeynarUser;
       };
     };
   };
@@ -82,8 +81,7 @@ export interface TimelineResultRaw {
   core?: {
     user_results?: {
       result?: {
-        is_blue_verified?: boolean;
-        legacy?: LegacyUserRaw;
+        legacy?: NeynarUser;
       };
     };
   };
@@ -139,7 +137,7 @@ export interface LegacyTweetRaw {
 
 export interface TimelineGlobalObjectsRaw {
   tweets?: { [key: string]: LegacyTweetRaw | undefined };
-  users?: { [key: string]: LegacyUserRaw | undefined };
+  users?: { [key: string]: NeynarUser | undefined };
 }
 
 export interface TimelineDataRawCursor {
@@ -224,7 +222,7 @@ export interface TimelineV1 {
 }
 
 export type ParseTweetResult =
-  | { success: true; tweet: Tweet }
+  | { success: true; tweet: Cast }
   | { success: false; err: Error };
 
 function parseTimelineTweet(
@@ -236,13 +234,13 @@ function parseTimelineTweet(
   if (tweet?.user_id_str == null) {
     return {
       success: false,
-      err: new Error(`Tweet "${id}" was not found in the timeline object.`),
+      err: new Error(`Cast "${id}" was not found in the timeline object.`),
     };
   }
 
   const users = timeline.globalObjects?.users ?? {};
   const user = users[tweet.user_id_str];
-  if (user?.screen_name == null) {
+  if (user?.username == null) {
     return {
       success: false,
       err: new Error(`User "${tweet.user_id_str}" has no username data.`),
@@ -252,13 +250,10 @@ function parseTimelineTweet(
   const hashtags = tweet.entities?.hashtags ?? [];
   const mentions = tweet.entities?.user_mentions ?? [];
   const media = tweet.extended_entities?.media ?? [];
-  const pinnedTweets = new Set<string | undefined>(
-    user.pinned_tweet_ids_str ?? [],
-  );
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
-  const tw: Tweet = {
+  const tw: Cast = {
     conversationId: tweet.conversation_id_str,
     id,
     hashtags: hashtags
@@ -270,8 +265,8 @@ function parseTimelineTweet(
       username: mention.screen_name,
       name: mention.name,
     })),
-    name: user.name,
-    permanentUrl: `https://twitter.com/${user.screen_name}/status/${id}`,
+    name: user.username,
+    permanentUrl: `https://warpcast.com/${user.username}/status/${id}`,
     photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
@@ -281,7 +276,7 @@ function parseTimelineTweet(
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
     userId: tweet.user_id_str,
-    username: user.screen_name,
+    username: user.username,
     videos,
   };
 
@@ -338,11 +333,6 @@ function parseTimelineTweet(
     tw.views = views;
   }
 
-  if (pinnedTweets.has(tweet.id_str)) {
-    // TODO: Update tests so this can be assigned at the tweet declaration
-    tw.isPin = true;
-  }
-
   if (sensitiveContent) {
     // TODO: Update tests so this can be assigned at the tweet declaration
     tw.sensitiveContent = true;
@@ -359,7 +349,7 @@ function parseTimelineTweet(
  * inital request)
  */
 export interface QueryTweetsResponse {
-  tweets: Tweet[];
+  tweets: Cast[];
   next?: string;
   previous?: string;
 }
@@ -369,8 +359,8 @@ export function parseTimelineTweetsV1(
 ): QueryTweetsResponse {
   let bottomCursor: string | undefined;
   let topCursor: string | undefined;
-  let pinnedTweet: Tweet | undefined;
-  let orderedTweets: Tweet[] = [];
+  let pinnedTweet: Cast | undefined;
+  let orderedTweets: Cast[] = [];
   for (const instruction of timeline.timeline?.instructions ?? []) {
     const { pinEntry, addEntries, replaceEntry } = instruction;
 

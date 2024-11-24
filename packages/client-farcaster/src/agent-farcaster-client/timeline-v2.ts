@@ -1,19 +1,18 @@
-import { LegacyUserRaw } from './profile';
-import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
+import { NeynarUser } from './profile.ts';
+import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util.ts';
 import {
   LegacyTweetRaw,
   ParseTweetResult,
   QueryTweetsResponse,
   SearchResultRaw,
   TimelineResultRaw,
-} from './timeline-v1';
-import { Tweet } from './tweets';
-import { isFieldDefined } from './type-util';
+} from './timeline-v1.ts';
+import { Cast } from './casts.ts';
+import { isFieldDefined } from './type-util.ts';
 
 export interface TimelineUserResultRaw {
   rest_id?: string;
-  legacy?: LegacyUserRaw;
-  is_blue_verified?: boolean;
+  legacy?: NeynarUser;
 }
 
 export interface TimelineEntryItemContentRaw {
@@ -104,13 +103,13 @@ export interface ThreadedConversation {
 }
 
 export function parseLegacyTweet(
-  user?: LegacyUserRaw,
+  user?: NeynarUser,
   tweet?: LegacyTweetRaw,
 ): ParseTweetResult {
   if (tweet == null) {
     return {
       success: false,
-      err: new Error('Tweet was not found in the timeline object.'),
+      err: new Error('Cast was not found in the timeline object.'),
     };
   }
 
@@ -125,7 +124,7 @@ export function parseLegacyTweet(
     if (!tweet.conversation_id_str) {
       return {
         success: false,
-        err: new Error('Tweet ID was not found in object.'),
+        err: new Error('Cast ID was not found in object.'),
       };
     }
 
@@ -135,13 +134,11 @@ export function parseLegacyTweet(
   const hashtags = tweet.entities?.hashtags ?? [];
   const mentions = tweet.entities?.user_mentions ?? [];
   const media = tweet.extended_entities?.media ?? [];
-  const pinnedTweets = new Set<string | undefined>(
-    user.pinned_tweet_ids_str ?? [],
-  );
+  
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
-  const tw: Tweet = {
+  const tw: Cast = {
     bookmarkCount: tweet.bookmark_count,
     conversationId: tweet.conversation_id_str,
     id: tweet.id_str,
@@ -154,8 +151,8 @@ export function parseLegacyTweet(
       username: mention.screen_name,
       name: mention.name,
     })),
-    name: user.name,
-    permanentUrl: `https://twitter.com/${user.screen_name}/status/${tweet.id_str}`,
+    name: user.username,
+    permanentUrl: `https://twitter.com/${user.username}/status/${tweet.id_str}`,
     photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
@@ -165,7 +162,7 @@ export function parseLegacyTweet(
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
     userId: tweet.user_id_str,
-    username: user.screen_name,
+    username: user.username,
     videos,
     isQuoted: false,
     isReply: false,
@@ -217,11 +214,6 @@ export function parseLegacyTweet(
   const views = parseInt(tweet.ext_views?.count ?? '');
   if (!isNaN(views)) {
     tw.views = views;
-  }
-
-  if (pinnedTweets.has(tweet.id_str)) {
-    // TODO: Update tests so this can be assigned at the tweet declaration
-    tw.isPin = true;
   }
 
   if (sensitiveContent) {
@@ -279,7 +271,7 @@ export function parseTimelineTweetsV2(
 ): QueryTweetsResponse {
   let bottomCursor: string | undefined;
   let topCursor: string | undefined;
-  const tweets: Tweet[] = [];
+  const tweets: Cast[] = [];
   const instructions =
     timeline.data?.user?.result?.timeline_v2?.timeline?.instructions ?? [];
   for (const instruction of instructions) {
@@ -329,7 +321,7 @@ export function parseTimelineEntryItemContentRaw(
 ) {
   let result = content.tweet_results?.result ?? content.tweetResult?.result;
   if (
-    result?.__typename === 'Tweet' ||
+    result?.__typename === 'Cast' ||
     (result?.__typename === 'TweetWithVisibilityResults' && result?.tweet)
   ) {
     if (result?.__typename === 'TweetWithVisibilityResults')
@@ -357,7 +349,7 @@ export function parseTimelineEntryItemContentRaw(
 }
 
 export function parseAndPush(
-  tweets: Tweet[],
+  tweets: Cast[],
   content: TimelineEntryItemContentRaw,
   entryId: string,
   isConversation = false,
@@ -375,8 +367,8 @@ export function parseAndPush(
 
 export function parseThreadedConversation(
   conversation: ThreadedConversation,
-): Tweet[] {
-  const tweets: Tweet[] = [];
+): Cast[] {
+  const tweets: Cast[] = [];
   const instructions =
     conversation.data?.threaded_conversation_with_injections_v2?.instructions ??
     [];

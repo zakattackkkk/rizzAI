@@ -326,6 +326,7 @@ export enum Clients {
     DIRECT = "direct",
     TWITTER = "twitter",
     TELEGRAM = "telegram",
+    FARCASTER = "farcaster",
 }
 
 export type Character = {
@@ -372,6 +373,12 @@ export type Character = {
         post: string[];
     };
     twitterProfile?: {
+        username: string;
+        screenName: string;
+        bio: string;
+        nicknames?: string[];
+    };
+    farcasterProfile?: {
         username: string;
         screenName: string;
         bio: string;

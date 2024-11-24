@@ -1,9 +1,10 @@
 import { Character, ModelProviderName } from "./types.ts";
+import { Clients } from "./types.ts";
 
 export const defaultCharacter: Character = {
     name: "Eliza",
     plugins: [],
-    clients: [],
+    clients: [Clients.FARCASTER],
     modelProvider: ModelProviderName.OPENAI,
     settings: {
         secrets: {},

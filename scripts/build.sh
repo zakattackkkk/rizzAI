@@ -36,6 +36,7 @@ PACKAGES=(
     "plugin-node"
     "plugin-bootstrap"
     "plugin-image-generation"
+    "client-farcaster"
 )
 
 # Build packages in specified order

@@ -9,13 +9,10 @@ import {
     stringToUuid,
     UUID,
 } from "@ai16z/eliza";
-import {
-    Tweet,
-} from "./tweets.ts";
+import { Cast } from "./agent-farcaster-client/casts.ts";
 
-import { Scraper } from "./scraper.ts";
-import { SearchMode } from "./agentFarcasterClientSearch.ts";
-import { QueryTweetsResponse } from "./timeline-v1.ts";
+import { NeynarAPI } from "./agent-farcaster-client/neynar-api.ts";
+import { QueryTweetsResponse } from "./agent-farcaster-client/timeline-v1.ts";
 
 import { EventEmitter } from "events";
 import fs from "fs";
@@ -84,67 +81,67 @@ class RequestQueue {
 }
 
 export class ClientBase extends EventEmitter {
-    static _twitterClient: Scraper;
-    twitterClient: Scraper;
+    static _farcasterClient: NeynarAPI;
+    farcasterClient: NeynarAPI;
     runtime: IAgentRuntime;
     directions: string;
-    lastCheckedTweetId: number | null = null;
-    tweetCacheFilePath = __dirname + "/tweetcache/latest_checked_tweet_id.txt";
+    lastCheckedCastId: number | null = null;
+    tweetCacheFilePath = __dirname + "/castcache/latest_checked_tweet_id.txt";
     imageDescriptionService: IImageDescriptionService;
     temperature: number = 0.5;
 
-    private tweetCache: Map<string, Tweet> = new Map();
+    private tweetCache: Map<string, Cast> = new Map();
     requestQueue: RequestQueue = new RequestQueue();
-    twitterUserId: string;
+    farcasterUserFID: string;
 
-    async cacheTweet(tweet: Tweet): Promise<void> {
-        if (!tweet) {
-            console.warn("Tweet is undefined, skipping cache");
+    async cacheCast(cast: Cast): Promise<void> {
+        if (!cast) {
+            console.warn("Cast is undefined, skipping cache");
             return;
         }
         const cacheDir = path.join(
             __dirname,
-            "tweetcache",
-            tweet.conversationId,
-            `${tweet.id}.json`
+            "castcache",
+            cast.conversationId,
+            `${cast.id}.json`
         );
         await fs.promises.mkdir(path.dirname(cacheDir), { recursive: true });
-        await fs.promises.writeFile(cacheDir, JSON.stringify(tweet, null, 2));
-        this.tweetCache.set(tweet.id, tweet);
+        await fs.promises.writeFile(cacheDir, JSON.stringify(cast, null, 2));
+        this.tweetCache.set(cast.id, cast);
     }
 
-    async getCachedTweet(tweetId: string): Promise<Tweet | undefined> {
-        if (this.tweetCache.has(tweetId)) {
-            return this.tweetCache.get(tweetId);
+    async getCachedCast(castid: string): Promise<Cast | undefined> {
+        if (this.tweetCache.has(castid)) {
+            return this.tweetCache.get(castid);
         }
 
         const cacheFile = path.join(
             __dirname,
-            "tweetcache",
+            "castcache",
             "*",
-            `${tweetId}.json`
+            `${castid}.json`
         );
         const files = await glob(cacheFile);
         if (files.length > 0) {
-            const tweetData = await fs.promises.readFile(files[0], "utf-8");
-            const tweet = JSON.parse(tweetData) as Tweet;
-            this.tweetCache.set(tweet.id, tweet);
-            return tweet;
+            const castData = await fs.promises.readFile(files[0], "utf-8");
+            const cast = JSON.parse(castData) as Cast;
+            this.tweetCache.set(cast.id, cast);
+            return cast;
         }
 
         return undefined;
     }
 
-    async getTweet(tweetId: string): Promise<Tweet> {
-        const cachedTweet = await this.getCachedTweet(tweetId);
+    async getTweet(castid: string): Promise<Cast> {
+        const cachedTweet = await this.getCachedCast(castid);
         if (cachedTweet) {
             return cachedTweet;
         }
 
         const tweet = await this.requestQueue.add(() =>
-            this.twitterClient.getTweet(tweetId)
+            this.farcasterClient.getTweet(castid)
         );
-        await this.cacheTweet(tweet);
+        await this.cacheCast(tweet);
         return tweet;
     }
 
@@ -159,11 +156,11 @@ export class ClientBase extends EventEmitter {
     constructor({ runtime }: { runtime: IAgentRuntime }) {
         super();
         this.runtime = runtime;
-        if (ClientBase._twitterClient) {
-            this.twitterClient = ClientBase._twitterClient;
+        if (ClientBase._farcasterClient) {
+            this.farcasterClient = ClientBase._farcasterClient;
         } else {
-            this.twitterClient = new Scraper();
-            ClientBase._twitterClient = this.twitterClient;
+            this.farcasterClient = new NeynarAPI(runtime.getSetting("FARCASTER_SIGNER_UUID"), runtime.getSetting("NEYNAR_API_KEY"), +runtime.getSetting("FARCASTER_USER_FID"), runtime.getSetting("FARCASTER_USERNAME"), !!runtime.getSetting("FARCASTER_DRY_RUN"));
+            ClientBase._farcasterClient = this.farcasterClient;
         }
 
         this.directions =
@@ -177,9 +174,9 @@ export class ClientBase extends EventEmitter {
             if (fs.existsSync(this.tweetCacheFilePath)) {
                 // make it?
                 const data = fs.readFileSync(this.tweetCacheFilePath, "utf-8");
-                this.lastCheckedTweetId = parseInt(data.trim());
+                this.lastCheckedCastId = parseInt(data.trim());
             } else {
-                // console.warn("Tweet cache file not found.");
+                // console.warn("Cast cache file not found.");
                 // console.warn(this.tweetCacheFilePath);
             }
         } catch (error) {
@@ -188,81 +185,15 @@ export class ClientBase extends EventEmitter {
                 error
             );
         }
-        const cookiesFilePath = path.join(
-            __dirname,
-            "tweetcache/" +
-                this.runtime.getSetting("TWITTER_USERNAME") +
-                "_cookies.json"
-        );
-
-        const dir = path.dirname(cookiesFilePath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
 
         // async initialization
         (async () => {
-            // Check for Twitter cookies
-            if (this.runtime.getSetting("TWITTER_COOKIES")) {
-                const cookiesArray = JSON.parse(
-                    this.runtime.getSetting("TWITTER_COOKIES")
-                );
-                await this.setCookiesFromArray(cookiesArray);
-            } else {
-                elizaLogger.debug("Cookies file path:", cookiesFilePath);
-                if (fs.existsSync(cookiesFilePath)) {
-                    const cookiesArray = JSON.parse(
-                        fs.readFileSync(cookiesFilePath, "utf-8")
-                    );
-                    await this.setCookiesFromArray(cookiesArray);
-                } else {
-                    await this.twitterClient.login(
-                        this.runtime.getSetting("TWITTER_USERNAME"),
-                        this.runtime.getSetting("TWITTER_PASSWORD"),
-                        this.runtime.getSetting("TWITTER_EMAIL"),
-                        this.runtime.getSetting("TWITTER_2FA_SECRET")
-                    );
-                    console.log("Logged in to Twitter");
-                    const cookies = await this.twitterClient.getCookies();
-                    fs.writeFileSync(
-                        cookiesFilePath,
-                        JSON.stringify(cookies),
-                        "utf-8"
-                    );
-                }
-            }
 
-            let loggedInWaits = 0;
-
-            while (!(await this.twitterClient.isLoggedIn())) {
-                console.log("Waiting for Twitter login");
-                await new Promise((resolve) => setTimeout(resolve, 2000));
-                if (loggedInWaits > 10) {
-                    console.error("Failed to login to Twitter");
-                    await this.twitterClient.login(
-                        this.runtime.getSetting("TWITTER_USERNAME"),
-                        this.runtime.getSetting("TWITTER_PASSWORD"),
-                        this.runtime.getSetting("TWITTER_EMAIL"),
-                        this.runtime.getSetting("TWITTER_2FA_SECRET")
-                    );
-
-                    const cookies = await this.twitterClient.getCookies();
-                    fs.writeFileSync(
-                        cookiesFilePath,
-                        JSON.stringify(cookies),
-                        "utf-8"
-                    );
-                    loggedInWaits = 0;
-                }
-                loggedInWaits++;
-            }
             const userId = await this.requestQueue.add(async () => {
                 // wait 3 seconds before getting the user id
                 await new Promise((resolve) => setTimeout(resolve, 10000));
                 try {
-                    return await this.twitterClient.getUserIdByScreenName(
-                        this.runtime.getSetting("TWITTER_USERNAME")
-                    );
+                    return await this.farcasterClient.getUserId();
                 } catch (error) {
                     console.error("Error getting user ID:", error);
                     return null;
@@ -272,18 +203,18 @@ export class ClientBase extends EventEmitter {
                 console.error("Failed to get user ID");
                 return;
             }
-            console.log("Twitter user ID:", userId);
-            this.twitterUserId = userId;
+            console.log("farcaster user ID:", userId);
+            this.farcasterUserFID = userId;
 
-            // Initialize Twitter profile
+            // Initialize farcaster profile
             const profile = await this.initializeProfile();
             if (profile) {
-                // console.log("Twitter profile initialized:", profile);
+                console.log("Farcaster profile initialized:", profile);
 
                 // Store profile info for use in responses
                 this.runtime.character = {
                     ...this.runtime.character,
-                    twitterProfile: {
+                    farcasterProfile: {
                         username: profile.username,
                         screenName: profile.screenName,
                         bio: profile.bio,
@@ -298,82 +229,28 @@ export class ClientBase extends EventEmitter {
         })();
     }
 
-    async fetchHomeTimeline(count: number): Promise<Tweet[]> {
-        const homeTimeline = await this.twitterClient.fetchHomeTimeline(
+    async fetchHomeTimeline(count: number): Promise<Cast[]> {
+        const homeTimeline = await this.farcasterClient.fetchHomeTimeline(
             count,
             []
         );
-
-        return homeTimeline
-            .filter((t) => t.__typename !== "TweetWithVisibilityResults")
-            .map((tweet) => {
-                console.log("tweet is", tweet);
-                const obj = {
-                    id: tweet.rest_id,
-                    name:
-                        tweet.name ??
-                        tweet.core?.user_results?.result?.legacy.name,
-                    username:
-                        tweet.username ??
-                        tweet.core?.user_results?.result?.legacy.screen_name,
-                    text: tweet.text ?? tweet.legacy?.full_text,
-                    inReplyToStatusId:
-                        tweet.inReplyToStatusId ??
-                        tweet.legacy?.in_reply_to_status_id_str,
-                    createdAt: tweet.createdAt ?? tweet.legacy?.created_at,
-                    userId: tweet.userId ?? tweet.legacy?.user_id_str,
-                    conversationId:
-                        tweet.conversationId ??
-                        tweet.legacy?.conversation_id_str,
-                    hashtags: tweet.hashtags ?? tweet.legacy?.entities.hashtags,
-                    mentions:
-                        tweet.mentions ?? tweet.legacy?.entities.user_mentions,
-                    photos:
-                        tweet.photos ??
-                        tweet.legacy?.entities.media?.filter(
-                            (media) => media.type === "photo"
-                        ) ??
-                        [],
-                    thread: [],
-                    urls: tweet.urls ?? tweet.legacy?.entities.urls,
-                    videos:
-                        tweet.videos ??
-                        tweet.legacy?.entities.media?.filter(
-                            (media) => media.type === "video"
-                        ) ??
-                        [],
-                };
-
-                console.log("obj is", obj);
-
-                return obj;
-            });
+        return homeTimeline;
     }
 
-    async fetchSearchTweets(
+    async fetchSearchCasts(
         query: string,
         maxTweets: number,
-        searchMode: SearchMode,
         cursor?: string
     ): Promise<QueryTweetsResponse> {
         try {
-            // Sometimes this fails because we are rate limited. in this case, we just need to return an empty array
-            // if we dont get a response in 5 seconds, something is wrong
-            const timeoutPromise = new Promise((resolve) =>
-                setTimeout(() => resolve({ tweets: [] }), 10000)
-            );
-
             try {
                 const result = await this.requestQueue.add(
                     async () =>
                         await Promise.race([
-                            this.twitterClient.fetchSearchTweets(
+                            this.farcasterClient.fetchSearchCasts(
                                 query,
                                 maxTweets,
-                                searchMode,
-                                cursor
                             ),
-                            timeoutPromise,
                         ])
                 );
                 return (result ?? { tweets: [] }) as QueryTweetsResponse;
@@ -428,10 +305,10 @@ export class ClientBase extends EventEmitter {
                 for (const tweet of tweetsToSave) {
                     const roomId = stringToUuid(
                         tweet.conversationId ??
-                            "default-room-" + this.runtime.agentId
+                        "default-room-" + this.runtime.agentId
                     );
                     const tweetuserId =
-                        tweet.userId === this.twitterUserId
+                        tweet.userId === this.farcasterUserFID
                             ? this.runtime.agentId
                             : stringToUuid(tweet.userId);
 
@@ -440,19 +317,19 @@ export class ClientBase extends EventEmitter {
                         roomId,
                         tweet.username,
                         tweet.name,
-                        "twitter"
+                        "farcaster"
                     );
 
                     const content = {
                         text: tweet.text,
                         url: tweet.permanentUrl,
-                        source: "twitter",
+                        source: "farcaster",
                         inReplyTo: tweet.inReplyToStatusId
                             ? stringToUuid(
-                                  tweet.inReplyToStatusId +
-                                      "-" +
-                                      this.runtime.agentId
-                              )
+                                tweet.inReplyToStatusId +
+                                "-" +
+                                this.runtime.agentId
+                            )
                             : undefined,
                     } as Content;
 
@@ -489,10 +366,9 @@ export class ClientBase extends EventEmitter {
         }
 
         // Get the most recent 20 mentions and interactions
-        const mentionsAndInteractions = await this.fetchSearchTweets(
-            `@${this.runtime.getSetting("TWITTER_USERNAME")}`,
+        const mentionsAndInteractions = await this.fetchSearchCasts(
+            this.runtime.getSetting("FARCASTER_USERNAME"),
             20,
-            SearchMode.Latest
         );
 
         // Combine the timeline tweets and mentions/interactions
@@ -533,9 +409,9 @@ export class ClientBase extends EventEmitter {
 
         await this.runtime.ensureUserExists(
             this.runtime.agentId,
-            this.runtime.getSetting("TWITTER_USERNAME"),
+            this.runtime.getSetting("FARCASTER_USERNAME"),
             this.runtime.character.name,
-            "twitter"
+            "farcaster"
         );
 
         // Save the new tweets as memories
@@ -544,7 +420,7 @@ export class ClientBase extends EventEmitter {
                 tweet.conversationId ?? "default-room-" + this.runtime.agentId
             );
             const tweetuserId =
-                tweet.userId === this.twitterUserId
+                tweet.userId === this.farcasterUserFID
                     ? this.runtime.agentId
                     : stringToUuid(tweet.userId);
 
@@ -553,13 +429,13 @@ export class ClientBase extends EventEmitter {
                 roomId,
                 tweet.username,
                 tweet.name,
-                "twitter"
+                "farcaster"
             );
 
             const content = {
                 text: tweet.text,
                 url: tweet.permanentUrl,
-                source: "twitter",
+                source: "farcaster",
                 inReplyTo: tweet.inReplyToStatusId
                     ? stringToUuid(tweet.inReplyToStatusId)
                     : undefined,
@@ -578,18 +454,6 @@ export class ClientBase extends EventEmitter {
 
         // Cache the search results to the file
         fs.writeFileSync(cacheFile, JSON.stringify(allTweets));
-    }
-
-    async setCookiesFromArray(cookiesArray: any[]) {
-        const cookieStrings = cookiesArray.map(
-            (cookie) =>
-                `${cookie.key}=${cookie.value}; Domain=${cookie.domain}; Path=${cookie.path}; ${
-                    cookie.secure ? "Secure" : ""
-                }; ${cookie.httpOnly ? "HttpOnly" : ""}; SameSite=${
-                    cookie.sameSite || "Lax"
-                }`
-        );
-        await this.twitterClient.setCookies(cookieStrings);
     }
 
     async saveRequestMessage(message: Memory, state: State) {
@@ -617,39 +481,38 @@ export class ClientBase extends EventEmitter {
 
             await this.runtime.evaluate(message, {
                 ...state,
-                twitterClient: this.twitterClient,
+                farcasterClient: this.farcasterClient,
             });
         }
     }
 
     async initializeProfile() {
-        const username = this.runtime.getSetting("TWITTER_USERNAME");
-        if (!username) {
-            console.error("Twitter username not configured");
+        const username = this.runtime.getSetting("FARCASTER_USERNAME");
+        const signerUuid = this.runtime.getSetting("FARCASTER_SIGNER_UUID");
+        const apiKey = this.runtime.getSetting("FARCASTER_API_KEY");
+        if (!username || !signerUuid || !apiKey) {
+            console.error("Farcaster username not configured");
             return;
         }
 
         try {
             const profile = await this.requestQueue.add(async () => {
-                const profile = await this.twitterClient.getProfile(username);
+                const profile = await this.farcasterClient.getProfile();
                 return {
                     username,
                     screenName: profile.name || this.runtime.character.name,
                     bio:
                         profile.biography ||
-                        typeof this.runtime.character.bio === "string"
+                            typeof this.runtime.character.bio === "string"
                             ? (this.runtime.character.bio as string)
-                            : this.runtime.character.bio.length > 0
-                              ? this.runtime.character.bio[0]
-                              : "",
-                    nicknames:
-                        this.runtime.character.twitterProfile?.nicknames || [],
+                            : this.runtime.character.bio.length > 0 ? this.runtime.character.bio[0] : "",
+                    nicknames: this.runtime.character.farcasterProfile?.nicknames || [],
                 };
             });
 
             return profile;
         } catch (error) {
-            console.error("Error fetching Twitter profile:", error);
+            console.error("Error fetching Farcaster profile:", error);
             return {
                 username: this.runtime.character.name,
                 screenName: username,
@@ -657,10 +520,10 @@ export class ClientBase extends EventEmitter {
                     typeof this.runtime.character.bio === "string"
                         ? (this.runtime.character.bio as string)
                         : this.runtime.character.bio.length > 0
-                          ? this.runtime.character.bio[0]
-                          : "",
+                            ? this.runtime.character.bio[0]
+                            : "",
                 nicknames:
-                    this.runtime.character.twitterProfile?.nicknames || [],
+                    this.runtime.character.farcasterProfile?.nicknames || [],
             };
         }
     }

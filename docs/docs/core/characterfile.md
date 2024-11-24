@@ -96,7 +96,7 @@ Specifies the AI model provider. Supported options from [ModelProviderName](/api
 
 #### `clients` (required)
 
-Array of supported client types from [Clients](/api/enumerations/clients) e.g., `DISCORD`, `DIRECT`, `TWITTER`, `TELEGRAM`.
+Array of supported client types from [Clients](/api/enumerations/clients) e.g., `DISCORD`, `DIRECT`, `TWITTER`, `TELEGRAM`, `FARCASTER`.
 
 #### `bio`
 
