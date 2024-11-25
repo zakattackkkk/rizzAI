@@ -270,6 +270,69 @@ export class DirectClient {
                 res.json({ images: imagesRes });
             }
         );
+
+        this.app.post(
+            "/load/:agentName", // name as its easier to remember and
+            //id is an uuid derived from name
+            async (req: express.Request, res: express.Response) => {
+                try {
+                    if (process.env.AGENT_RUNTIME_MANAGEMENT !== "true") {
+                        throw new Error(
+                            "Agent runtime management is not enabled"
+                        );
+                    }
+
+                    const agentName = req.params.agentName;
+                    const agentId = stringToUuid(agentName);
+                    // Check if agent is already running
+                    let runtime = this.agents.get(agentId);
+                    if (runtime) {
+                        res.status(409).json({
+                            success: false,
+                            error: `Agent ${agentName} already running`,
+                        });
+                        return;
+                    }
+                    const agentPort = process.env.AGENT_PORT
+                        ? parseInt(process.env.AGENT_PORT)
+                        : 3001;
+
+                    // Forward request to agent server
+                    const response = await fetch(
+                        `http://localhost:${agentPort}/load/${agentName}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                        }
+                    );
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        // Process the error from the agent
+                        res.status(response.status).json({
+                            success: false,
+                            error:
+                                errorData.error ||
+                                "Unknown error occurred while loading the agent",
+                        });
+                        return; // Exit the function after handling the error
+                    }
+                    const data = await response.json();
+                    res.json(data);
+                } catch (error) {
+                    console.error("Error loading agent:", error);
+                    res.status(500).json({
+                        success: false,
+                        error: `Error loading agent ${error}`,
+                    });
+                }
+            }
+        );
+    }
+
+    public getAgent(agentId: string) {
+        return this.agents.get(agentId);
     }
 
     public registerAgent(runtime: AgentRuntime) {
