@@ -839,10 +839,6 @@ export const generateImage = async (
             });
             const urls: string[] = [];
             for (let i = 0; i < response.data.length; i++) {
-                //const json = response.data[i].b64_json;
-                // decode base64
-                //const base64 = Buffer.from(json, "base64").toString("base64");
-                //urls.push(base64);
                 const data: unknown = response.data
                 urls.push(data[i].url);
             }
