@@ -599,6 +599,8 @@ export type Character = {
 
     /** Optional system prompt */
     system?: string;
+    /** Optional image generation prompt */
+    imageGenerationPrompt?: string;
 
     /** Model provider to use */
     modelProvider: ModelProviderName;
