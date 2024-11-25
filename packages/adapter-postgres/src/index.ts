@@ -64,14 +64,16 @@ export class PostgresDatabaseAdapter
             while (retryCount < maxRetries) {
                 try {
                     const delay = baseDelay * Math.pow(2, retryCount);
-                    elizaLogger.log(`Attempting to reconnect in ${delay}ms...`);
+                    elizaLogger.warn(
+                        `Attempting to reconnect in ${delay}ms...`
+                    );
                     await new Promise((resolve) => setTimeout(resolve, delay));
 
                     // Create new pool with same config
                     this.pool = new pg.Pool(this.pool.options);
                     await this.testConnection();
 
-                    elizaLogger.log("Successfully reconnected to database");
+                    elizaLogger.success("Successfully reconnected to database");
                     return;
                 } catch (error) {
                     retryCount++;
@@ -121,7 +123,7 @@ export class PostgresDatabaseAdapter
         try {
             client = await this.pool.connect();
             const result = await client.query("SELECT NOW()");
-            elizaLogger.log(
+            elizaLogger.success(
                 "Database connection test successful:",
                 result.rows[0]
             );
@@ -220,7 +222,7 @@ export class PostgresDatabaseAdapter
         if (rows.length === 0) return null;
 
         const account = rows[0];
-        elizaLogger.log("account", account);
+        elizaLogger.debug("account", account);
         return {
             ...account,
             details:
@@ -351,7 +353,7 @@ export class PostgresDatabaseAdapter
         if (!params.roomId) throw new Error("roomId is required");
         let sql = `SELECT * FROM memories WHERE type = $1 AND "agentId" = $2 AND "roomId" = $3`;
         const values: any[] = [params.tableName, params.agentId, params.roomId];
-        let paramCount = 2;
+        let paramCount = 3; // Updated to start at 3 since we already have 3 parameters
 
         if (params.start) {
             paramCount++;
@@ -371,9 +373,9 @@ export class PostgresDatabaseAdapter
 
         sql += ' ORDER BY "createdAt" DESC';
 
-        if (params.count) {
+        if (params.count && typeof params.count === "number") {
             paramCount++;
-            sql += ` LIMIT $${paramCount}`;
+            sql += ` LIMIT $${paramCount}::integer`; // Cast to integer
             values.push(params.count);
         }
 
@@ -633,7 +635,7 @@ export class PostgresDatabaseAdapter
             );
 
             if (existingParticipant.rows.length > 0) {
-                elizaLogger.log(
+                elizaLogger.error(
                     `Participant with userId ${userId} already exists in room ${roomId}.`
                 );
                 return true; // Exit early if the participant already exists
@@ -648,7 +650,7 @@ export class PostgresDatabaseAdapter
             return true;
         } catch (error) {
             if (error instanceof DatabaseError) {
-                elizaLogger.log("Error adding participant", error);
+                elizaLogger.error("Error adding participant", error);
                 // This is to prevent duplicate participant error in case of a race condition
                 // Handle unique constraint violation error (code 23505)
                 if (error.code === "23505") {
