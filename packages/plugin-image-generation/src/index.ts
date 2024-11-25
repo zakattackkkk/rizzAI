@@ -16,6 +16,11 @@ import fs from "fs";
 import path from "path";
 import { validateImageGenConfig } from "./enviroment";
 
+/**
+ * Template for generating image descriptions in the agent's voice.
+ * Uses various context elements like knowledge, bio, and recent posts
+ * to maintain consistent character voice.
+ */
 const imagePromptTemplate = `# Knowledge
 {{knowledge}}
 
@@ -29,11 +34,21 @@ About {{agentName}}:
 {{recentPosts}}
 
 # Task: Generate an image description in the voice and style of {{agentName}} according to the previous <user_message>.
-Write a two sentence image description that considers the <user_message> and may also include {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Try to write something totally different than previous posts. Do not add commentary or acknowledge this request, just write the description of the image to be generated.
+Write a short image description that considers the <user_message> complemented by {{adjective}} about {{topic}} from the perspective of {{agentName}}. Try to write something totally different than previous posts. Do not add commentary or acknowledge this request, just write the description of the image to be generated.
 Your response should not contain any questions. Brief, concise statements only. No emojis. Use \\n\\n (double spaces) between statements.`;
 
+/**
+ * Prompt for the image generation AI to create detailed, high-quality prompts
+ * that will produce visually appealing images.
+ */
 const imageGenerationPrompt = "You are an AI assistant specialized in crafting effective prompts for image generation. Your task is to analyze a user's message and create a comprehensive, natural-language prompt that will guide an image generation algorithm to produce high-quality, visually appealing images.\n\nBegin by analyzing the content of the user's message. Follow these steps:\n\n1. List out key elements from the user's message, categorizing them to ensure comprehensive coverage:\n   * Topic: The main subject or scene with specific details\n   * Material: The medium or style (e.g., digital painting, 3D render)\n   * Style: The artistic direction (e.g., fantasy, vaporwave)\n   * Artist: Specific artists to influence the visual style\n   * Webpage Influence: Art platforms like ArtStation or DeviantArt for quality enhancement\n   * Sharpness: Terms like \"sharp focus\" or \"highly detailed\" for clarity\n   * Extra Details: Descriptors to enhance atmosphere (e.g., cinematic, dystopian)\n   * Shade and Color: Color-related keywords to control mood (e.g., moody lighting)\n   * Lighting and Brightness: Specific lighting styles (e.g., dramatic shadows)\n   * Camera Angle: Perspective and framing (e.g., close-up, wide shot, aerial view)\n   * Composition: Layout guidance (e.g., rule of thirds, centered, dynamic)\n   * Time Period: Temporal context if relevant\n   * Cultural Elements: Any specific cultural influences\n   * Textures: Surface quality descriptions\n   * Weather/Atmosphere: Environmental conditions if applicable\n   * Negative Prompts: Elements to exclude from the image\n\n2. Brainstorm complementary elements that would enhance the user's vision:\n   * Suggest fitting artists and styles if not specified\n   * Consider atmospheric elements that would strengthen the concept\n   * Identify potential technical aspects that would improve the result\n   * Note any elements that should be avoided to maintain the desired look\n\n3. Construct your final prompt by:\n   * Leading with the most important scene/subject details from the user's message\n   * Incorporating all relevant technical and stylistic elements\n   * Grouping related concepts together naturally\n   * Maintaining clear, flowing language throughout\n   * Adding complementary details that enhance but don't alter the core concept\n   * Concluding with negative prompts separated by a \"Negative:\" marker\n\nRemember:\n- Preserve ALL specific details from the user's original message\n- Don't force details into a rigid template\n- Create a cohesive, readable description\n- Keep the focus on the user's core concept while enhancing it with technical and artistic refinements\n\nYour output should contain ONLY the final prompt text, with no additional explanations, tags, or formatting.";
 
+/**
+ * Saves a base64-encoded image to the local filesystem
+ * @param base64Data - The base64-encoded image data
+ * @param filename - Name to use for the saved file (without extension)
+ * @returns The full filepath where the image was saved
+ */
 export function saveBase64Image(base64Data: string, filename: string): string {
     // Create generatedImages directory if it doesn't exist
     const imageDir = path.join(process.cwd(), "generatedImages");
@@ -56,6 +71,12 @@ export function saveBase64Image(base64Data: string, filename: string): string {
     return filepath;
 }
 
+/**
+ * Saves an image from a Heurist URL to the local filesystem
+ * @param imageUrl - URL of the image to download and save
+ * @param filename - Name to use for the saved file (without extension)
+ * @returns Promise resolving to the full filepath where the image was saved
+ */
 export async function saveHeuristImage(
     imageUrl: string,
     filename: string
@@ -83,8 +104,13 @@ export async function saveHeuristImage(
     return filepath;
 }
 
+/**
+ * Action definition for image generation capability
+ * Handles generating images based on user prompts while maintaining agent personality
+ */
 const imageGeneration: Action = {
     name: "GENERATE_IMAGE",
+    // Alternative action names that should trigger image generation
     similes: [
         "IMAGE_GENERATION",
         "IMAGE_GEN",
@@ -97,6 +123,10 @@ const imageGeneration: Action = {
         "MAKE_A",
     ],
     description: "Generate an image to go along with the message.",
+    
+    /**
+     * Validates that required API keys are present for image generation
+     */
     validate: async (runtime: IAgentRuntime, _message: Memory) => {
         await validateImageGenConfig(runtime);
 
@@ -108,6 +138,14 @@ const imageGeneration: Action = {
 
         return anthropicApiKeyOk || togetherApiKeyOk || heuristApiKeyOk;
     },
+
+    /**
+     * Main handler for image generation:
+     * 1. Generates an image description in the agent's voice
+     * 2. Converts that description into an optimized image generation prompt
+     * 3. Generates the image
+     * 4. Saves and returns the result
+     */
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
@@ -122,31 +160,32 @@ const imageGeneration: Action = {
                 imagePromptTemplate,
         });
 
+        // Generate the initial prompt in agent's voice
         const agentImagePrompt = await generateText({
             runtime,
             context: `${agentContext}\n\n<user_message>${message.content.text}</user_message>`,
             modelClass: ModelClass.SMALL,
         });
 
-        elizaLogger.log("Agent image prompt:", agentImagePrompt);
+        elizaLogger.log("Agent prompt & caption for image: ", agentImagePrompt);
 
-
-        //state = (await runtime.composeState(message)) as State;
         const userId = runtime.agentId;
         elizaLogger.log("User ID:", userId);
 
+        // Convert agent's description into an optimized image generation prompt
         const context = runtime.character.system ??
         settings.SYSTEM_PROMPT ?? imageGenerationPrompt + `\n\nHere is the user's message:\n<user_message> ${agentImagePrompt} </user_message>`;
 
+        // Generate the technical prompt for the image generation model
         const imagePrompt = await generateText({
             runtime,
             context,
             modelClass: ModelClass.SMALL,
         });
-        elizaLogger.log("Image prompt received:", imagePrompt);
 
         const res: { image: string; caption: string }[] = [];
 
+        // Generate the actual image
         elizaLogger.log("Generating image with prompt:", imagePrompt);
         const images = await generateImage(
             {
@@ -158,6 +197,7 @@ const imageGeneration: Action = {
             runtime
         );
 
+        // Process and save generated images
         if (images.success && images.data && images.data.length > 0) {
             elizaLogger.log(
                 "Image generation successful, number of images:",
@@ -176,46 +216,19 @@ const imageGeneration: Action = {
 
                 elizaLogger.log(`Processing image ${i + 1}:`, filename);
 
-                //just dont even add a caption or a description just have it generate & send
-                /*
-                try {
-                    const imageService = runtime.getService(ServiceType.IMAGE_DESCRIPTION);
-                    if (imageService && typeof imageService.describeImage === 'function') {
-                        const caption = await imageService.describeImage({ imageUrl: filepath });
-                        captionText = caption.description;
-                        captionTitle = caption.title;
-                    }
-                } catch (error) {
-                    elizaLogger.error("Caption generation failed, using default caption:", error);
-                }*/
-
-                //const caption = "...";
-                /*= await generateCaption(
-                    {
-                        imageUrl: image,
-                    },
-                    runtime
-                );*/
-
-                res.push({ image: filepath, caption: agentImagePrompt }); //caption.title });
-
-                elizaLogger.log(
-                    `Generated caption for image ${i + 1}:`,
-                    agentImagePrompt //caption.title
-                );
-                //res.push({ image: image, caption: caption.title });
+                res.push({ image: filepath, caption: agentImagePrompt });
 
                 callback(
                     {
-                        text: agentImagePrompt, //caption.description,
+                        text: agentImagePrompt,
                         attachments: [
                             {
                                 id: crypto.randomUUID(),
                                 url: filepath,
                                 title: "Generated image",
                                 source: "imageGeneration",
-                                description: imagePrompt, //caption.title,
-                                text: agentImagePrompt, //caption.description,
+                                description: imagePrompt,
+                                text: agentImagePrompt,
                             },
                         ],
                     },
@@ -231,6 +244,8 @@ const imageGeneration: Action = {
             elizaLogger.error("Image generation failed or returned no data.");
         }
     },
+    
+    // Example interactions that should trigger image generation
     examples: [
         // TODO: We want to generate images in more abstract ways, not just when asked to generate an image
 
@@ -315,6 +330,9 @@ const imageGeneration: Action = {
     ],
 } as Action;
 
+/**
+ * Plugin definition for image generation functionality
+ */
 export const imageGenerationPlugin: Plugin = {
     name: "imageGeneration",
     description: "Generate images",
