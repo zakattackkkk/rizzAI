@@ -174,13 +174,6 @@ export class DirectClient {
                     inReplyTo: undefined,
                 };
 
-                const userMessage = {
-                    content,
-                    userId,
-                    roomId,
-                    agentId: runtime.agentId,
-                };
-
                 const memory: Memory = {
                     id: messageId,
                     agentId: runtime.agentId,
