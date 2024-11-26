@@ -42,6 +42,7 @@ import {
     type Actor,
     type Evaluator,
     type Memory,
+    type Media,
 } from "./types.ts";
 import { stringToUuid } from "./uuid.ts";
 import { v4 as uuidv4 } from "uuid";
@@ -74,7 +75,7 @@ export class AgentRuntime implements IAgentRuntime {
     /**
      * Authentication token used for securing requests.
      */
-    token: string | null;
+    token: string;
 
     /**
      * Custom actions that the agent can perform.
@@ -166,7 +167,7 @@ export class AgentRuntime implements IAgentRuntime {
         return serviceInstance as T;
     }
 
-    async registerService(service: Service): Promise<void> {
+    registerService(service: Service): void {
         const serviceType = service.serviceType;
         elizaLogger.log("Registering service:", serviceType);
 
@@ -280,7 +281,14 @@ export class AgentRuntime implements IAgentRuntime {
             tableName: "fragments",
         });
 
-        (opts.managers ?? []).forEach((manager: IMemoryManager) => {
+        [
+            this.messageManager,
+            this.descriptionManager,
+            this.loreManager,
+            this.documentsManager,
+            this.knowledgeManager,
+            ...opts.managers ?? []
+        ].forEach((manager: IMemoryManager) => {
             this.registerMemoryManager(manager);
         });
 
@@ -296,12 +304,11 @@ export class AgentRuntime implements IAgentRuntime {
             this.character.modelProvider
         );
         elizaLogger.info("- Opts model provider:", opts.modelProvider);
-        elizaLogger.info("- Current model provider:", this.modelProvider);
 
         this.modelProvider =
             this.character.modelProvider ??
-            opts.modelProvider ??
-            this.modelProvider;
+            opts.modelProvider;
+
 
         elizaLogger.info("Selected model provider:", this.modelProvider);
 
@@ -352,7 +359,7 @@ export class AgentRuntime implements IAgentRuntime {
             this.registerContextProvider(provider);
         });
 
-        (opts.evaluators ?? []).forEach((evaluator: Evaluator) => {
+        (opts.evaluators ?? []).forEach((evaluator) => {
             this.registerEvaluator(evaluator);
         });
     }
@@ -378,6 +385,11 @@ export class AgentRuntime implements IAgentRuntime {
             if (plugin.services)
                 await Promise.all(
                     plugin.services?.map((service) => service.initialize(this))
+                );
+
+            if (plugin.clients)
+                await Promise.all(
+                    plugin.clients?.map((service) => service.start(this))
                 );
         }
 
@@ -968,12 +980,12 @@ Text: ${attachment.text}
             lore,
             adjective:
                 this.character.adjectives &&
-                this.character.adjectives.length > 0
+                    this.character.adjectives.length > 0
                     ? this.character.adjectives[
-                          Math.floor(
-                              Math.random() * this.character.adjectives.length
-                          )
-                      ]
+                    Math.floor(
+                        Math.random() * this.character.adjectives.length
+                    )
+                    ]
                     : "",
             knowledge: formattedKnowledge,
             knowledgeData: knowledegeData,
@@ -987,70 +999,70 @@ Text: ${attachment.text}
             topic:
                 this.character.topics && this.character.topics.length > 0
                     ? this.character.topics[
-                          Math.floor(
-                              Math.random() * this.character.topics.length
-                          )
-                      ]
+                    Math.floor(
+                        Math.random() * this.character.topics.length
+                    )
+                    ]
                     : null,
             topics:
                 this.character.topics && this.character.topics.length > 0
                     ? `${this.character.name} is interested in ` +
-                      this.character.topics
-                          .sort(() => 0.5 - Math.random())
-                          .slice(0, 5)
-                          .map((topic, index) => {
-                              if (index === this.character.topics.length - 2) {
-                                  return topic + " and ";
-                              }
-                              // if last topic, don't add a comma
-                              if (index === this.character.topics.length - 1) {
-                                  return topic;
-                              }
-                              return topic + ", ";
-                          })
-                          .join("")
+                    this.character.topics
+                        .sort(() => 0.5 - Math.random())
+                        .slice(0, 5)
+                        .map((topic, index) => {
+                            if (index === this.character.topics.length - 2) {
+                                return topic + " and ";
+                            }
+                            // if last topic, don't add a comma
+                            if (index === this.character.topics.length - 1) {
+                                return topic;
+                            }
+                            return topic + ", ";
+                        })
+                        .join("")
                     : "",
             characterPostExamples:
                 formattedCharacterPostExamples &&
-                formattedCharacterPostExamples.replaceAll("\n", "").length > 0
+                    formattedCharacterPostExamples.replaceAll("\n", "").length > 0
                     ? addHeader(
-                          `# Example Posts for ${this.character.name}`,
-                          formattedCharacterPostExamples
-                      )
+                        `# Example Posts for ${this.character.name}`,
+                        formattedCharacterPostExamples
+                    )
                     : "",
             characterMessageExamples:
                 formattedCharacterMessageExamples &&
-                formattedCharacterMessageExamples.replaceAll("\n", "").length >
+                    formattedCharacterMessageExamples.replaceAll("\n", "").length >
                     0
                     ? addHeader(
-                          `# Example Conversations for ${this.character.name}`,
-                          formattedCharacterMessageExamples
-                      )
+                        `# Example Conversations for ${this.character.name}`,
+                        formattedCharacterMessageExamples
+                    )
                     : "",
             messageDirections:
                 this.character?.style?.all?.length > 0 ||
-                this.character?.style?.chat.length > 0
+                    this.character?.style?.chat.length > 0
                     ? addHeader(
-                          "# Message Directions for " + this.character.name,
-                          (() => {
-                              const all = this.character?.style?.all || [];
-                              const chat = this.character?.style?.chat || [];
-                              return [...all, ...chat].join("\n");
-                          })()
-                      )
+                        "# Message Directions for " + this.character.name,
+                        (() => {
+                            const all = this.character?.style?.all || [];
+                            const chat = this.character?.style?.chat || [];
+                            return [...all, ...chat].join("\n");
+                        })()
+                    )
                     : "",
 
             postDirections:
                 this.character?.style?.all?.length > 0 ||
-                this.character?.style?.post.length > 0
+                    this.character?.style?.post.length > 0
                     ? addHeader(
-                          "# Post Directions for " + this.character.name,
-                          (() => {
-                              const all = this.character?.style?.all || [];
-                              const post = this.character?.style?.post || [];
-                              return [...all, ...post].join("\n");
-                          })()
-                      )
+                        "# Post Directions for " + this.character.name,
+                        (() => {
+                            const all = this.character?.style?.all || [];
+                            const post = this.character?.style?.post || [];
+                            return [...all, ...post].join("\n");
+                        })()
+                    )
                     : "",
 
             //old logic left in for reference
@@ -1084,9 +1096,9 @@ Text: ${attachment.text}
             goals:
                 goals && goals.length > 0
                     ? addHeader(
-                          "# Goals\n{{agentName}} should prioritize accomplishing the objectives that are in progress.",
-                          goals
-                      )
+                        "# Goals\n{{agentName}} should prioritize accomplishing the objectives that are in progress.",
+                        goals
+                    )
                     : "",
             goalsData,
             recentMessages:
@@ -1143,16 +1155,16 @@ Text: ${attachment.text}
             actions:
                 actionsData.length > 0
                     ? addHeader(
-                          "# Available Actions",
-                          formatActions(actionsData)
-                      )
+                        "# Available Actions",
+                        formatActions(actionsData)
+                    )
                     : "",
             actionExamples:
                 actionsData.length > 0
                     ? addHeader(
-                          "# Action Examples",
-                          composeActionExamples(actionsData, 10)
-                      )
+                        "# Action Examples",
+                        composeActionExamples(actionsData, 10)
+                    )
                     : "",
             evaluatorsData,
             evaluators:
@@ -1193,7 +1205,7 @@ Text: ${attachment.text}
             }),
         });
 
-        let allAttachments = [];
+        let allAttachments: Media[] = [];
 
         if (recentMessagesData && Array.isArray(recentMessagesData)) {
             const lastMessageWithAttachment = recentMessagesData.find(
