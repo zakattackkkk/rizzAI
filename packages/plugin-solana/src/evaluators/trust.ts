@@ -10,6 +10,7 @@ import {
     Memory,
     ModelClass,
     Evaluator,
+    stringToUuid,
 } from "@ai16z/eliza";
 import { TrustScoreManager } from "../providers/trustScoreProvider.ts";
 import { TokenProvider } from "../providers/token.ts";
@@ -212,6 +213,7 @@ async function handler(runtime: IAgentRuntime, message: Memory) {
         const userId = account.id;
 
         const recMemory = {
+            id: stringToUuid("rec-" + Date.now().toString()),
             userId,
             agentId,
             content: { text: JSON.stringify(rec) },

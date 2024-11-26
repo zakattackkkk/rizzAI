@@ -192,7 +192,7 @@ export class DirectClient {
 
                 await runtime.messageManager.createMemory(memory);
 
-                const state = await runtime.composeState(userMessage, {
+                const state = await runtime.composeState(memory, {
                     agentName: runtime.character.name,
                 });
 
@@ -208,10 +208,13 @@ export class DirectClient {
                 });
 
                 // save response to memory
-                const responseMessage = {
-                    ...userMessage,
+                const responseMessage: Memory = {
+                    id: stringToUuid(runtime.agentId + Date.now().toString()),
+                    roomId,
                     userId: runtime.agentId,
+                    agentId: runtime.agentId,
                     content: response,
+                    createdAt: Date.now()
                 };
 
                 await runtime.messageManager.createMemory(responseMessage);
@@ -289,19 +292,19 @@ export class DirectClient {
                     const data = await response.json();
                     res.json(data);
                 } catch (error) {
-                    res.status(500).json({ 
+                    res.status(500).json({
                         error: 'Failed to forward request to BagelDB',
-                        details: error.message 
+                        details: error.message
                     });
                 }
             }
         );
         this.app.get(
-            "/fine-tune/:assetId", 
+            "/fine-tune/:assetId",
             async (req: express.Request, res: express.Response) => {
                 const assetId = req.params.assetId;
                 const downloadDir = path.join(process.cwd(), 'downloads', assetId);
-                
+
                 console.log('Download directory:', downloadDir);
 
                 try {
@@ -320,21 +323,21 @@ export class DirectClient {
                     }
 
                     console.log('Response headers:', fileResponse.headers);
-                    
+
                     const fileName = fileResponse.headers.get('content-disposition')
                         ?.split('filename=')[1]
                         ?.replace(/"/g, '') || 'default_name.txt';
-                    
+
                     console.log('Saving as:', fileName);
-                    
+
                     const arrayBuffer = await fileResponse.arrayBuffer();
                     const buffer = Buffer.from(arrayBuffer);
-                    
+
                     const filePath = path.join(downloadDir, fileName);
                     console.log('Full file path:', filePath);
-                    
+
                     await fs.promises.writeFile(filePath, buffer);
-                    
+
                     // Verify file was written
                     const stats = await fs.promises.stat(filePath);
                     console.log('File written successfully. Size:', stats.size, 'bytes');
@@ -350,7 +353,7 @@ export class DirectClient {
 
                 } catch (error) {
                     console.error('Detailed error:', error);
-                    res.status(500).json({ 
+                    res.status(500).json({
                         error: 'Failed to download files from BagelDB',
                         details: error.message,
                         stack: error.stack

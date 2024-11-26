@@ -20,7 +20,7 @@ export class FarcasterPostManager {
         public runtime: IAgentRuntime,
         private signer: Signer,
         public cache: Map<string, any>
-    ) {}
+    ) { }
 
     public async start() {
         const generateNewCastLoop = async () => {
@@ -76,10 +76,12 @@ export class FarcasterPostManager {
 
             const state = await this.runtime.composeState(
                 {
+                    id: stringToUuid("farcaster-post-" + Date.now().toString()),
                     roomId: generateRoomId,
                     userId: this.runtime.agentId,
                     agentId: this.runtime.agentId,
                     content: { text: "", action: "" },
+                    createdAt: Date.now(),
                 },
                 {
                     farcasterUserName: profile.username,
