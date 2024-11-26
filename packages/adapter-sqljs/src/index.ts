@@ -19,6 +19,7 @@ import { Database } from "./types.ts";
 export class SqlJsDatabaseAdapter
     extends DatabaseAdapter<Database>
     implements IDatabaseCacheAdapter {
+    db: Database;
     constructor(db: Database) {
         super();
         this.db = db;

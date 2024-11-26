@@ -12,9 +12,17 @@ import {
 } from "@ai16z/eliza";
 import { DatabaseAdapter } from "@ai16z/eliza";
 import { v4 as uuid } from "uuid";
-export class SupabaseDatabaseAdapter extends DatabaseAdapter {
+
+export class SupabaseDatabaseAdapter extends DatabaseAdapter<SupabaseClient> {
+    db: SupabaseClient;
+
+    constructor(supabaseUrl: string, supabaseKey: string) {
+        super();
+        this.db = createClient(supabaseUrl, supabaseKey);
+    }
+
     async getRoom(roomId: UUID): Promise<UUID | null> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("rooms")
             .select("id")
             .eq("id", roomId)
@@ -28,7 +36,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getParticipantsForAccount(userId: UUID): Promise<Participant[]> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("participants")
             .select("*")
             .eq("userId", userId);
@@ -46,7 +54,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         roomId: UUID,
         userId: UUID
     ): Promise<"FOLLOWED" | "MUTED" | null> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("participants")
             .select("userState")
             .eq("roomId", roomId)
@@ -66,7 +74,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         userId: UUID,
         state: "FOLLOWED" | "MUTED" | null
     ): Promise<void> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("participants")
             .update({ userState: state })
             .eq("roomId", roomId)
@@ -79,7 +87,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getParticipantsForRoom(roomId: UUID): Promise<UUID[]> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("participants")
             .select("userId")
             .eq("roomId", roomId);
@@ -93,19 +101,14 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         return data.map((row) => row.userId as UUID);
     }
 
-    supabase: SupabaseClient;
 
-    constructor(supabaseUrl: string, supabaseKey: string) {
-        super();
-        this.supabase = createClient(supabaseUrl, supabaseKey);
-    }
 
     async getMemoriesByRoomIds(params: {
         roomIds: UUID[];
         agentId?: UUID;
         tableName: string;
     }): Promise<Memory[]> {
-        let query = this.supabase
+        let query = this.db
             .from(params.tableName)
             .select("*")
             .in("roomId", params.roomIds);
@@ -130,7 +133,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getAccountById(userId: UUID): Promise<Account | null> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("accounts")
             .select("*")
             .eq("id", userId);
@@ -141,7 +144,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async createAccount(account: Account): Promise<boolean> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("accounts")
             .upsert([account]);
         if (error) {
@@ -153,7 +156,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
 
     async getActorDetails(params: { roomId: UUID }): Promise<Actor[]> {
         try {
-            const response = await this.supabase
+            const response = await this.db
                 .from("rooms")
                 .select(
                     `
@@ -197,7 +200,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         match_count: number;
         unique: boolean;
     }): Promise<Memory[]> {
-        const result = await this.supabase.rpc("search_memories", {
+        const result = await this.db.rpc("search_memories", {
             query_table_name: params.tableName,
             query_roomId: params.roomId,
             query_embedding: params.embedding,
@@ -226,7 +229,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             levenshtein_score: number;
         }[]
     > {
-        const result = await this.supabase.rpc("get_embedding_list", opts);
+        const result = await this.db.rpc("get_embedding_list", opts);
         if (result.error) {
             throw new Error(JSON.stringify(result.error));
         }
@@ -237,7 +240,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         goalId: UUID;
         status: GoalStatus;
     }): Promise<void> {
-        await this.supabase
+        await this.db
             .from("goals")
             .update({ status: params.status })
             .match({ id: params.goalId });
@@ -249,7 +252,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         roomId: UUID;
         type: string;
     }): Promise<void> {
-        const { error } = await this.supabase.from("logs").insert({
+        const { error } = await this.db.from("logs").insert({
             body: params.body,
             userId: params.userId,
             roomId: params.roomId,
@@ -271,7 +274,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         start?: number;
         end?: number;
     }): Promise<Memory[]> {
-        const query = this.supabase
+        const query = this.db
             .from(params.tableName)
             .select("*")
             .eq("roomId", params.roomId);
@@ -330,7 +333,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             (queryParams as any).query_agentId = params.agentId;
         }
 
-        const result = await this.supabase.rpc("search_memories", queryParams);
+        const result = await this.db.rpc("search_memories", queryParams);
         if (result.error) {
             throw new Error(JSON.stringify(result.error));
         }
@@ -340,7 +343,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getMemoryById(memoryId: UUID): Promise<Memory | null> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("memories")
             .select("*")
             .eq("id", memoryId)
@@ -372,7 +375,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                 similarity_threshold: 0.95,
             };
 
-            const result = await this.supabase.rpc(
+            const result = await this.db.rpc(
                 "check_similarity_and_insert",
                 opts
             );
@@ -381,7 +384,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                 throw new Error(JSON.stringify(result.error));
             }
         } else {
-            const result = await this.supabase
+            const result = await this.db
                 .from("memories")
                 .insert({ ...memory, createdAt, type: tableName });
             const { error } = result;
@@ -392,7 +395,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async removeMemory(memoryId: UUID): Promise<void> {
-        const result = await this.supabase
+        const result = await this.db
             .from("memories")
             .delete()
             .eq("id", memoryId);
@@ -403,7 +406,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async removeAllMemories(roomId: UUID, tableName: string): Promise<void> {
-        const result = await this.supabase.rpc("remove_memories", {
+        const result = await this.db.rpc("remove_memories", {
             query_table_name: tableName,
             query_roomId: roomId,
         });
@@ -426,7 +429,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             query_roomId: roomId,
             query_unique: !!unique,
         };
-        const result = await this.supabase.rpc("count_memories", query);
+        const result = await this.db.rpc("count_memories", query);
 
         if (result.error) {
             throw new Error(JSON.stringify(result.error));
@@ -448,7 +451,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             row_count: params.count,
         };
 
-        const { data: goals, error } = await this.supabase.rpc(
+        const { data: goals, error } = await this.db.rpc(
             "get_goals",
             opts
         );
@@ -461,7 +464,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async updateGoal(goal: Goal): Promise<void> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("goals")
             .update(goal)
             .match({ id: goal.id });
@@ -471,14 +474,14 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async createGoal(goal: Goal): Promise<void> {
-        const { error } = await this.supabase.from("goals").insert(goal);
+        const { error } = await this.db.from("goals").insert(goal);
         if (error) {
             throw new Error(`Error creating goal: ${error.message}`);
         }
     }
 
     async removeGoal(goalId: UUID): Promise<void> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("goals")
             .delete()
             .eq("id", goalId);
@@ -488,7 +491,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async removeAllGoals(roomId: UUID): Promise<void> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("goals")
             .delete()
             .eq("roomId", roomId);
@@ -498,7 +501,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getRoomsForParticipant(userId: UUID): Promise<UUID[]> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("participants")
             .select("roomId")
             .eq("userId", userId);
@@ -513,7 +516,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getRoomsForParticipants(userIds: UUID[]): Promise<UUID[]> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("participants")
             .select("roomId")
             .in("userId", userIds);
@@ -529,7 +532,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
 
     async createRoom(roomId?: UUID): Promise<UUID> {
         roomId = roomId ?? (uuid() as UUID);
-        const { data, error } = await this.supabase.rpc("create_room", {
+        const { data, error } = await this.db.rpc("create_room", {
             roomId,
         });
 
@@ -545,7 +548,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async removeRoom(roomId: UUID): Promise<void> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("rooms")
             .delete()
             .eq("id", roomId);
@@ -556,7 +559,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async addParticipant(userId: UUID, roomId: UUID): Promise<boolean> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("participants")
             .insert({ userId: userId, roomId: roomId });
 
@@ -568,7 +571,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async removeParticipant(userId: UUID, roomId: UUID): Promise<boolean> {
-        const { error } = await this.supabase
+        const { error } = await this.db
             .from("participants")
             .delete()
             .eq("userId", userId)
@@ -594,7 +597,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
 
         if (!allRoomData || allRoomData.length === 0) {
             // If no existing room is found, create a new room
-            const { data: newRoomData, error: roomsError } = await this.supabase
+            const { data: newRoomData, error: roomsError } = await this.db
                 .from("rooms")
                 .insert({})
                 .single();
@@ -609,7 +612,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             roomId = allRoomData[0];
         }
 
-        const { error: participantsError } = await this.supabase
+        const { error: participantsError } = await this.db
             .from("participants")
             .insert([
                 { userId: params.userA, roomId },
@@ -623,7 +626,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         }
 
         // Create or update the relationship between the two users
-        const { error: relationshipError } = await this.supabase
+        const { error: relationshipError } = await this.db
             .from("relationships")
             .upsert({
                 userA: params.userA,
@@ -647,7 +650,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         userA: UUID;
         userB: UUID;
     }): Promise<Relationship | null> {
-        const { data, error } = await this.supabase.rpc("get_relationship", {
+        const { data, error } = await this.db.rpc("get_relationship", {
             usera: params.userA,
             userb: params.userB,
         });
@@ -660,7 +663,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getRelationships(params: { userId: UUID }): Promise<Relationship[]> {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.db
             .from("relationships")
             .select("*")
             .or(`userA.eq.${params.userId},userB.eq.${params.userId}`)

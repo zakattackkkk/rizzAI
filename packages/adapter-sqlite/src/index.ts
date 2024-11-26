@@ -20,8 +20,19 @@ import { sqliteTables } from "./sqliteTables.ts";
 
 export class SqliteDatabaseAdapter
     extends DatabaseAdapter<Database>
-    implements IDatabaseCacheAdapter
-{
+    implements IDatabaseCacheAdapter {
+    db: Database;
+
+    constructor(db: Database) {
+        super();
+        this.db = db;
+        load(db);
+    }
+
+    async init() {
+        this.db.exec(sqliteTables);
+    }
+
     async getRoom(roomId: UUID): Promise<UUID | null> {
         const sql = "SELECT id FROM rooms WHERE id = ?";
         const room = this.db.prepare(sql).get(roomId) as
@@ -68,16 +79,6 @@ export class SqliteDatabaseAdapter
             "UPDATE participants SET userState = ? WHERE roomId = ? AND userId = ?"
         );
         stmt.run(state, roomId, userId);
-    }
-
-    constructor(db: Database) {
-        super();
-        this.db = db;
-        load(db);
-    }
-
-    async init() {
-        this.db.exec(sqliteTables);
     }
 
     async getAccountById(userId: UUID): Promise<Account | null> {
