@@ -187,6 +187,7 @@ export type Model = {
  */
 export type Models = {
     [ModelProviderName.OPENAI]: Model;
+    [ModelProviderName.ETERNALAI]: Model;
     [ModelProviderName.ANTHROPIC]: Model;
     [ModelProviderName.GROK]: Model;
     [ModelProviderName.GROQ]: Model;
@@ -205,6 +206,7 @@ export type Models = {
  */
 export enum ModelProviderName {
     OPENAI = "openai",
+    ETERNALAI = "eternalai",
     ANTHROPIC = "anthropic",
     GROK = "grok",
     GROQ = "groq",
@@ -666,6 +668,7 @@ export type Character = {
     /** Optional configuration */
     settings?: {
         secrets?: { [key: string]: string };
+        buttplug?: boolean;
         voice?: {
             model?: string;
             url?: string;
@@ -1092,6 +1095,7 @@ export enum ServiceType {
     BROWSER = "browser",
     SPEECH_GENERATION = "speech_generation",
     PDF = "pdf",
+    BUTTPLUG = "buttplug",
 }
 
 export enum LoggingLevel {

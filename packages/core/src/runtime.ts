@@ -414,7 +414,7 @@ export class AgentRuntime implements IAgentRuntime {
             const existingDocument =
                 await this.documentsManager.getMemoryById(knowledgeId);
             if (existingDocument) {
-                return;
+                continue;
             }
 
             console.log(
