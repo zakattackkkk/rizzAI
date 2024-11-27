@@ -1,4 +1,4 @@
-import { composeContext } from "@ai16z/eliza";
+import { composeContext, stringToUuid } from "@ai16z/eliza";
 import { generateObjectArray } from "@ai16z/eliza";
 import { MemoryManager } from "@ai16z/eliza";
 import {
@@ -91,6 +91,7 @@ async function handler(runtime: IAgentRuntime, message: Memory) {
 
     for (const fact of filteredFacts) {
         const factMemory = await factsManager.addEmbeddingToMemory({
+            id: stringToUuid("fact-" + Date.now().toString()),
             userId: agentId!,
             agentId,
             content: { text: fact },

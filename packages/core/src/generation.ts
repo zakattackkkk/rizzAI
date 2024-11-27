@@ -13,7 +13,7 @@ import { createOllama } from "ollama-ai-provider";
 import OpenAI from "openai";
 import { encoding_for_model, TiktokenModel } from "tiktoken";
 import Together from "together-ai";
-import { ZodSchema } from "zod";
+import type { AnyZodObject } from "zod";
 import { elizaLogger } from "./index.ts";
 import { getModel, models } from "./models.ts";
 import {
@@ -103,7 +103,7 @@ export async function generateText({
         elizaLogger.debug(
             `Trimming context to max length of ${max_context_length} tokens.`
         );
-        context = await trimTokens(context, max_context_length, "gpt-4o");
+        context = trimTokens(context, max_context_length, "gpt-4o");
 
         let response: string;
 
@@ -902,7 +902,7 @@ export interface GenerationOptions {
     runtime: IAgentRuntime;
     context: string;
     modelClass: TiktokenModel;
-    schema?: ZodSchema;
+    schema: AnyZodObject;
     schemaName?: string;
     schemaDescription?: string;
     stop?: string[];
@@ -917,8 +917,8 @@ interface ModelSettings {
     prompt: string;
     temperature: number;
     maxTokens: number;
-    frequencyPenalty: number;
-    presencePenalty: number;
+    frequencyPenalty: number | undefined;
+    presencePenalty: number | undefined;
     stop?: string[];
 }
 
@@ -998,7 +998,7 @@ interface ProviderOptions {
     provider: ModelProviderName;
     model: any;
     apiKey: string;
-    schema?: ZodSchema;
+    schema: AnyZodObject;
     schemaName?: string;
     schemaDescription?: string;
     mode?: "auto" | "json" | "tool";

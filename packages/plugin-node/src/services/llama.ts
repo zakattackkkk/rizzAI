@@ -501,8 +501,8 @@ export class LlamaService extends Service {
         context: string,
         temperature: number,
         stop: string[],
-        frequency_penalty: number,
-        presence_penalty: number,
+        frequency_penalty: number | undefined,
+        presence_penalty: number | undefined,
         max_tokens: number,
         useGrammar: boolean
     ): Promise<any | string> {

@@ -23,12 +23,12 @@ export const parseShouldRespondFromText = (
     return match
         ? (match[0].toUpperCase() as "RESPOND" | "IGNORE" | "STOP")
         : text.includes("RESPOND")
-          ? "RESPOND"
-          : text.includes("IGNORE")
-            ? "IGNORE"
-            : text.includes("STOP")
-              ? "STOP"
-              : null;
+            ? "RESPOND"
+            : text.includes("IGNORE")
+                ? "IGNORE"
+                : text.includes("STOP")
+                    ? "STOP"
+                    : null;
 };
 
 export const booleanFooter = `Respond with a YES or a NO.`;
@@ -57,14 +57,14 @@ Your response must include the JSON block.`;
  * @param text - The input text from which to extract and parse the JSON array.
  * @returns An array parsed from the JSON string if successful; otherwise, null.
  */
-export function parseJsonArrayFromText(text: string) {
-    let jsonData = null;
+export function parseJsonArrayFromText<T = any>(text: string) {
+    let jsonData: T[] | null = null;
 
     const jsonBlockMatch = text.match(jsonBlockPattern);
 
     if (jsonBlockMatch) {
         try {
-            jsonData = JSON.parse(jsonBlockMatch[1]);
+            jsonData = JSON.parse(jsonBlockMatch[1]) as T[];
         } catch (e) {
             console.error("Error parsing JSON:", e);
             return null;
@@ -75,7 +75,7 @@ export function parseJsonArrayFromText(text: string) {
 
         if (arrayMatch) {
             try {
-                jsonData = JSON.parse(arrayMatch[0]);
+                jsonData = JSON.parse(arrayMatch[0]) as T[];
             } catch (e) {
                 console.error("Error parsing JSON:", e);
                 return null;

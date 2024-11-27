@@ -30,9 +30,9 @@ const __dirname = path.dirname(__filename); // get the name of the directory
 
 export class PostgresDatabaseAdapter
     extends DatabaseAdapter<Pool>
-    implements IDatabaseCacheAdapter
-{
-    private pool: Pool;
+    implements IDatabaseCacheAdapter {
+
+    db: Pool;
 
     constructor(connectionConfig: any) {
         super();
@@ -43,12 +43,12 @@ export class PostgresDatabaseAdapter
             connectionTimeoutMillis: 2000,
         };
 
-        this.pool = new pg.Pool({
+        this.db = new pg.Pool({
             ...defaultConfig,
             ...connectionConfig, // Allow overriding defaults
         });
 
-        this.pool.on("error", async (err) => {
+        this.db.on("error", async (err) => {
             elizaLogger.error("Unexpected error on idle client", err);
 
             // Attempt to reconnect with exponential backoff
@@ -65,7 +65,7 @@ export class PostgresDatabaseAdapter
                     await new Promise((resolve) => setTimeout(resolve, delay));
 
                     // Create new pool with same config
-                    this.pool = new pg.Pool(this.pool.options);
+                    this.db = new pg.Pool(this.db.options);
                     await this.testConnection();
 
                     elizaLogger.success("Successfully reconnected to database");
@@ -90,7 +90,7 @@ export class PostgresDatabaseAdapter
         queryTextOrConfig: string | QueryConfig<I>,
         values?: QueryConfigValues<I>
     ): Promise<QueryResult<R>> {
-        const client = await this.pool.connect();
+        const client = await this.db.connect();
 
         try {
             return client.query(queryTextOrConfig, values);
@@ -116,7 +116,7 @@ export class PostgresDatabaseAdapter
     async testConnection(): Promise<boolean> {
         let client;
         try {
-            client = await this.pool.connect();
+            client = await this.db.connect();
             const result = await client.query("SELECT NOW()");
             elizaLogger.success(
                 "Database connection test successful:",

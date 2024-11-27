@@ -28,7 +28,7 @@ export class FarcasterInteractionManager {
         public runtime: IAgentRuntime,
         private signer: Signer,
         public cache: Map<string, any>
-    ) {}
+    ) { }
 
     public async start() {
         const handleInteractionsLoop = async () => {
@@ -87,10 +87,12 @@ export class FarcasterInteractionManager {
             });
 
             const memory: Memory = {
+                id: stringToUuid(messageHash),
                 content: { text: mention.data.castAddBody.text },
                 agentId: this.runtime.agentId,
                 userId,
                 roomId,
+                createdAt: Date.now(),
             };
 
             await this.handleCast({

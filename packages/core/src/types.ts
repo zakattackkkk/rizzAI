@@ -310,7 +310,7 @@ export interface State {
  */
 export interface Memory {
     /** Optional unique identifier */
-    id?: UUID;
+    id: UUID;
 
     /** Associated user ID */
     userId: UUID;
@@ -319,7 +319,7 @@ export interface Memory {
     agentId: UUID;
 
     /** Optional creation timestamp */
-    createdAt?: number;
+    createdAt: number;
 
     /** Memory content */
     content: Content;
@@ -949,7 +949,7 @@ export interface IAgentRuntime {
     agentId: UUID;
     serverUrl: string;
     databaseAdapter: IDatabaseAdapter;
-    token: string | null;
+    token: string;
     modelProvider: ModelProviderName;
     character: Character;
     providers: Provider[];
@@ -1054,16 +1054,16 @@ export interface ITextGenerationService extends Service {
         context: string,
         temperature: number,
         stop: string[],
-        frequency_penalty: number,
-        presence_penalty: number,
+        frequency_penalty: number | undefined,
+        presence_penalty: number | undefined,
         max_tokens: number
     ): Promise<any>;
     queueTextCompletion(
         context: string,
         temperature: number,
         stop: string[],
-        frequency_penalty: number,
-        presence_penalty: number,
+        frequency_penalty: number | undefined,
+        presence_penalty: number | undefined,
         max_tokens: number
     ): Promise<string>;
     getEmbeddingResponse(input: string): Promise<number[] | undefined>;

@@ -32,8 +32,8 @@ async function getRemoteEmbedding(
             "Content-Type": "application/json",
             ...(options.apiKey
                 ? {
-                      Authorization: `Bearer ${options.apiKey}`,
-                  }
+                    Authorization: `Bearer ${options.apiKey}`,
+                }
                 : {}),
         },
         body: JSON.stringify({
@@ -87,8 +87,8 @@ export async function embed(runtime: IAgentRuntime, input: string) {
     const embeddingModel = settings.USE_OPENAI_EMBEDDING
         ? "text-embedding-3-small"
         : runtime.character.modelProvider === ModelProviderName.OLLAMA
-          ? settings.OLLAMA_EMBEDDING_MODEL || "mxbai-embed-large"
-          : modelProvider.model?.[ModelClass.EMBEDDING] ||
+            ? settings.OLLAMA_EMBEDDING_MODEL || "mxbai-embed-large"
+            : modelProvider.model?.[ModelClass.EMBEDDING] ||
             models[ModelProviderName.OPENAI].model[ModelClass.EMBEDDING];
 
     if (!embeddingModel) {
@@ -125,7 +125,7 @@ export async function embed(runtime: IAgentRuntime, input: string) {
         // Use OpenAI endpoint if specified, otherwise use provider endpoint
         endpoint: settings.USE_OPENAI_EMBEDDING
             ? "https://api.openai.com/v1"
-            : runtime.character.modelEndpointOverride || modelProvider.endpoint,
+            : runtime.character.modelEndpointOverride || modelProvider.endpoint!,
         // Use OpenAI API key if specified, otherwise use runtime token
         apiKey: settings.USE_OPENAI_EMBEDDING
             ? settings.OPENAI_API_KEY
