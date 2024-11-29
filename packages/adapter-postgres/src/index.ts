@@ -318,10 +318,6 @@ export class PostgresDatabaseAdapter
             }
 
             const account = rows[0];
-            // elizaLogger.debug("Account retrieved:", {
-            //     userId,
-            //     hasDetails: !!account.details,
-            // });
 
             return {
                 ...account,
@@ -357,11 +353,6 @@ export class PostgresDatabaseAdapter
                         ? JSON.parse(account.details)
                         : account.details,
             }));
-
-            // elizaLogger.debug("Accounts retrieved:", {
-            //     userIds,
-            //     count: accounts.length,
-            // });
 
             return accounts;
         });
