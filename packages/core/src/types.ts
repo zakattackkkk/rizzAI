@@ -606,9 +606,13 @@ export type Character = {
 
     /** Optional system prompt */
     system?: string;
+    /** Optional image generation prompt */
+    imageGenerationPrompt?: string;
 
     /** Model provider to use */
     modelProvider: ModelProviderName;
+    /** Optional image model provider */
+    imageModelProvider?: ModelProviderName;
 
     /** Optional model endpoint override */
     modelEndpointOverride?: string;
