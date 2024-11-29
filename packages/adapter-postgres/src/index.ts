@@ -333,6 +333,41 @@ export class PostgresDatabaseAdapter
         });
     }
 
+    async getAccountsByIds(userIds: UUID[]): Promise<Account[]> {
+        if (userIds.length === 0) {
+            return [];
+        }
+
+        return this.withRetry(async () => {
+            const query = `
+                SELECT * FROM accounts
+                WHERE id = ANY($1::uuid[])
+            `;
+            const { rows } = await this.pool.query(query, [userIds]);
+
+            if (rows.length === 0) {
+                elizaLogger.debug("No accounts found for provided userIds:", { userIds });
+                return [];
+            }
+
+            const accounts = rows.map(account => ({
+                ...account,
+                details:
+                    typeof account.details === "string"
+                        ? JSON.parse(account.details)
+                        : account.details,
+            }));
+
+            // elizaLogger.debug("Accounts retrieved:", {
+            //     userIds,
+            //     count: accounts.length,
+            // });
+
+            return accounts;
+        });
+    }
+
+
     async createAccount(account: Account): Promise<boolean> {
         return this.withRetry(async () => {
             try {
