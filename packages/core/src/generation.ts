@@ -115,6 +115,7 @@ export async function generateText({
         switch (provider) {
             // OPENAI & LLAMACLOUD shared same structure.
             case ModelProviderName.OPENAI:
+            case ModelProviderName.ETERNALAI:
             case ModelProviderName.LLAMACLOUD: {
                 elizaLogger.debug("Initializing OpenAI model.");
                 const openai = createOpenAI({ apiKey, baseURL: endpoint });
@@ -912,7 +913,7 @@ export const generateCaption = async (
 export interface GenerationOptions {
     runtime: IAgentRuntime;
     context: string;
-    modelClass: TiktokenModel;
+    modelClass: ModelClass;
     schema?: ZodSchema;
     schemaName?: string;
     schemaDescription?: string;
@@ -957,7 +958,7 @@ export const generateObjectV2 = async ({
     }
 
     const provider = runtime.modelProvider;
-    const model = models[provider].model[modelClass];
+    const model = models[provider].model[modelClass] as TiktokenModel;
     if (!model) {
         throw new Error(`Unsupported model class: ${modelClass}`);
     }
@@ -969,7 +970,7 @@ export const generateObjectV2 = async ({
     const apiKey = runtime.token;
 
     try {
-        context = await trimTokens(context, max_context_length, "gpt-4o");
+        context = trimTokens(context, max_context_length, model);
 
         const modelOptions: ModelSettings = {
             prompt: context,
@@ -1031,6 +1032,7 @@ export async function handleProvider(
     const { provider, runtime, context, modelClass } = options;
     switch (provider) {
         case ModelProviderName.OPENAI:
+        case ModelProviderName.ETERNALAI:
         case ModelProviderName.LLAMACLOUD:
             return await handleOpenAI(options);
         case ModelProviderName.ANTHROPIC:
