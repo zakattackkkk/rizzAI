@@ -28,8 +28,6 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 
-const { DatabaseError } = pg;
-
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
 
@@ -757,7 +755,7 @@ export class PostgresDatabaseAdapter
         return this.withRetry(async () => {
             try {
                 const relationshipId = v4();
-                const result = await this.pool.query(
+                await this.pool.query(
                     `INSERT INTO relationships (id, "userA", "userB", "userId")
                     VALUES ($1, $2, $3, $4)
                     RETURNING id`,
