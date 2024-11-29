@@ -2,7 +2,6 @@ import { v4 } from "uuid";
 
 // Import the entire module as default
 import pg from "pg";
-const { Pool } = pg;
 type Pool = pg.Pool;
 
 import {
@@ -140,7 +139,7 @@ export class PostgresDatabaseAdapter
             await this.pool.end();
 
             // Create new pool
-            this.pool = new Pool({
+            this.pool = new pg.Pool({
                 ...this.pool.options,
                 connectionTimeoutMillis: this.connectionTimeout,
             });
